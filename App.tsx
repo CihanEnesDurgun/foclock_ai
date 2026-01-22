@@ -6,7 +6,7 @@ import { authService } from './services/authService';
 import { locales } from './locales';
 
 const App: React.FC = () => {
-  const [view, setView] = useState<'splash' | 'auth' | 'home'>('splash');
+  const [view, setView] = useState<'splash' | 'welcome' | 'auth' | 'home'>('splash');
   const [user, setUser] = useState<User | null>(null);
   const [isLogin, setIsLogin] = useState(true);
   const [authError, setAuthError] = useState('');
@@ -57,10 +57,10 @@ const App: React.FC = () => {
           setStats(userStats);
           setView('home');
         } else {
-          setTimeout(() => setView('auth'), 1000);
+          setTimeout(() => setView('welcome'), 1000);
         }
       } catch (e) {
-        setView('auth');
+        setView('welcome');
       }
     };
     init();
@@ -185,11 +185,159 @@ const App: React.FC = () => {
     );
   }
 
+  if (view === 'welcome') {
+    const welcomeTexts = {
+      tr: {
+        title: 'FoClock AI',
+        subtitle: 'Nöral Odak Motoru',
+        beta: 'Beta v1.0',
+        betaMessage: '🎯 Özel erişim: Bu beta sürümünü test eden seçili kullanıcılardan birisiniz. Sizin deneyiminiz ve geri bildirimleriniz FoClock AI\'nın geleceğini şekillendiriyor.',
+        feature1Title: 'AI Destekli Planlama',
+        feature1Desc: 'Fufu AI ile görevlerinizi bilimsel temellere dayalı olarak planlayın ve optimize edin.',
+        feature2Title: 'Ultradian Ritimler',
+        feature2Desc: '90 dakikalık derin odak blokları ve 20 dakikalık zorunlu resetler ile doğal ritminize uyum sağlayın.',
+        feature3Title: 'Flow State Protokolü',
+        feature3Desc: 'Bilişsel yük teorisine dayalı sistem ile prefrontal korteksinizi aşırı yükten koruyun.',
+        login: 'Giriş Yap',
+        register: 'Hesap Oluştur',
+        footer: 'Bilimsel temellere dayalı odak yönetimi sistemi'
+      },
+      en: {
+        title: 'FoClock AI',
+        subtitle: 'Neural Focus Engine',
+        beta: 'Beta v1.0',
+        betaMessage: '🎯 Exclusive Access: You\'re among the select few testing this beta version. Your experience and feedback are shaping the future of FoClock AI.',
+        feature1Title: 'AI-Powered Planning',
+        feature1Desc: 'Plan and optimize your tasks based on scientific principles with Fufu AI.',
+        feature2Title: 'Ultradian Rhythms',
+        feature2Desc: 'Align with your natural rhythm with 90-minute deep focus blocks and 20-minute mandatory resets.',
+        feature3Title: 'Flow State Protocol',
+        feature3Desc: 'Protect your prefrontal cortex from overload with a system based on cognitive load theory.',
+        login: 'Sign In',
+        register: 'Create Account',
+        footer: 'Scientifically based focus management system'
+      }
+    };
+    
+    const texts = welcomeTexts[lang];
+
+    return (
+      <div className="h-screen w-screen bg-white flex items-center justify-center p-6 overflow-hidden relative" data-theme="light">
+        {/* Language switcher */}
+        <div className="absolute top-6 right-6 z-20">
+          <button 
+            onClick={() => setLang(lang === 'tr' ? 'en' : 'tr')}
+            className="px-4 py-2 rounded-lg bg-transparent border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all"
+          >
+            {lang === 'tr' ? 'EN' : 'TR'}
+          </button>
+        </div>
+
+        <div className="max-w-4xl w-full relative z-10">
+          {/* Logo and Title */}
+          <div className="text-center mb-16 animate-fade">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-black rounded-2xl text-white font-black text-3xl mb-8">
+              F
+            </div>
+            <h1 className="text-5xl md:text-6xl font-black text-black mb-3 tracking-tight">
+              {texts.title}
+            </h1>
+            <p className="text-lg md:text-xl text-gray-600 font-medium mb-6">
+              {texts.subtitle}
+            </p>
+            <div className="inline-block px-4 py-1.5 bg-black text-white rounded-lg mb-4">
+              <p className="text-xs font-bold">
+                {texts.beta}
+              </p>
+            </div>
+            <div className="max-w-lg mx-auto px-6 py-4 bg-gray-50 border border-gray-200 rounded-xl">
+              <p className="text-sm text-gray-700 leading-relaxed font-medium">
+                {texts.betaMessage}
+              </p>
+            </div>
+          </div>
+
+          {/* Features Grid */}
+          <div className="grid md:grid-cols-3 gap-8 mb-16 animate-fade" style={{animationDelay: '0.2s'}}>
+            <div className="p-8 border border-gray-200 rounded-2xl bg-white hover:border-gray-300 transition-all">
+              <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center mb-6">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                </svg>
+              </div>
+              <h3 className="text-base font-bold text-black mb-3">{texts.feature1Title}</h3>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                {texts.feature1Desc}
+              </p>
+            </div>
+
+            <div className="p-8 border border-gray-200 rounded-2xl bg-white hover:border-gray-300 transition-all">
+              <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center mb-6">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10"/>
+                  <polyline points="12 6 12 12 16 14"/>
+                </svg>
+              </div>
+              <h3 className="text-base font-bold text-black mb-3">{texts.feature2Title}</h3>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                {texts.feature2Desc}
+              </p>
+            </div>
+
+            <div className="p-8 border border-gray-200 rounded-2xl bg-white hover:border-gray-300 transition-all">
+              <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center mb-6">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                  <path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                </svg>
+              </div>
+              <h3 className="text-base font-bold text-black mb-3">{texts.feature3Title}</h3>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                {texts.feature3Desc}
+              </p>
+            </div>
+          </div>
+
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-fade" style={{animationDelay: '0.4s'}}>
+            <button 
+              onClick={() => { setIsLogin(true); setView('auth'); }} 
+              className="w-full sm:w-auto px-10 py-4 bg-black text-white font-bold rounded-xl text-sm transition-all hover:bg-gray-800 active:scale-98"
+            >
+              {texts.login}
+            </button>
+            <button 
+              onClick={() => { setIsLogin(false); setView('auth'); }} 
+              className="w-full sm:w-auto px-10 py-4 border border-gray-300 text-black font-bold rounded-xl text-sm transition-all hover:bg-gray-50 active:scale-98"
+            >
+              {texts.register}
+            </button>
+          </div>
+
+          {/* Footer info */}
+          <div className="mt-12 text-center animate-fade" style={{animationDelay: '0.6s'}}>
+            <p className="text-xs text-gray-400">
+              {texts.footer}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (view === 'auth') {
     return (
       <div className="h-screen w-screen bg-[var(--bg-app)] flex items-center justify-center p-6">
         {isSyncing && <div className="sync-overlay"><div className="loader-dots"><div className="dot"></div><div className="dot"></div><div className="dot"></div></div></div>}
-        <div className="max-w-md w-full p-12 border border-[var(--border)] rounded-[3rem] bg-[var(--bg-sidebar)] shadow-2xl transition-all">
+        <div className="max-w-md w-full p-12 border border-[var(--border)] rounded-[3rem] bg-[var(--bg-sidebar)] shadow-2xl transition-all relative">
+          <button 
+            onClick={() => setView('welcome')} 
+            className="absolute top-6 left-6 p-2 rounded-xl hover:bg-white/5 transition-all text-[var(--text-dim)] hover:text-[var(--text-bright)]"
+            aria-label="Geri dön"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+          </button>
           <div className="flex justify-center mb-10">
             <div className="w-14 h-14 bg-[var(--accent)] rounded-2xl flex items-center justify-center text-[var(--accent-text)] font-black text-xl shadow-xl">F</div>
           </div>
@@ -203,7 +351,7 @@ const App: React.FC = () => {
             <input name="password" type="password" placeholder={t.password} className="input-auth" required />
             {authError && <p className="text-red-500 text-[10px] font-black uppercase text-center bg-red-500/10 py-2 rounded-lg">{authError}</p>}
             <button type="submit" className="w-full py-5 bg-[var(--accent)] text-[var(--accent-text)] font-black rounded-2xl uppercase text-[11px] tracking-widest transition-all hover:brightness-110 active:scale-[0.98] shadow-lg">{isLogin ? t.signIn : t.signUp}</button>
-            <button type="button" onClick={() => { setIsLogin(!isLogin); setAuthError(''); }} className="w-full text-[10px] text-[var(--text-dim)] uppercase font-black hover:text-[var(--text-bright)] py-2">{isLogin ? "HESAP OLUŞTUR" : "GİRİŞ YAP"}</button>
+            <button type="button" onClick={() => { setIsLogin(!isLogin); setAuthError(''); }} className="w-full text-xs text-[var(--text-dim)] font-medium hover:text-[var(--text-bright)] py-2">{isLogin ? t.signUp : t.signIn}</button>
           </form>
         </div>
       </div>
