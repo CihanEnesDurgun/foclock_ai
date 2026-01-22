@@ -222,99 +222,99 @@ const App: React.FC = () => {
     const texts = welcomeTexts[lang];
 
     return (
-      <div className="h-screen w-screen bg-white flex items-center justify-center p-6 overflow-hidden relative" data-theme="light">
+      <div className="h-screen w-screen bg-white flex items-center justify-center p-4 sm:p-6 overflow-y-auto relative" data-theme="light">
         {/* Language switcher */}
-        <div className="absolute top-6 right-6 z-20">
+        <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20">
           <button 
             onClick={() => setLang(lang === 'tr' ? 'en' : 'tr')}
-            className="px-4 py-2 rounded-lg bg-transparent border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all"
+            className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-transparent border border-gray-300 text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all"
           >
             {lang === 'tr' ? 'EN' : 'TR'}
           </button>
         </div>
 
-        <div className="max-w-4xl w-full relative z-10">
+        <div className="max-w-4xl w-full relative z-10 py-4">
           {/* Logo and Title */}
-          <div className="text-center mb-16 animate-fade">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-black rounded-2xl text-white font-black text-3xl mb-8">
+          <div className="text-center mb-6 sm:mb-8 md:mb-10 animate-fade">
+            <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 bg-black rounded-2xl text-white font-black text-2xl sm:text-3xl mb-4 sm:mb-6">
               F
             </div>
-            <h1 className="text-5xl md:text-6xl font-black text-black mb-3 tracking-tight">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-black mb-2 sm:mb-3 tracking-tight">
               {texts.title}
             </h1>
-            <p className="text-lg md:text-xl text-gray-600 font-medium mb-6">
+            <p className="text-base sm:text-lg md:text-xl text-gray-600 font-medium mb-3 sm:mb-4">
               {texts.subtitle}
             </p>
-            <div className="inline-block px-4 py-1.5 bg-black text-white rounded-lg mb-4">
+            <div className="inline-block px-3 py-1 sm:px-4 sm:py-1.5 bg-black text-white rounded-lg mb-3 sm:mb-4">
               <p className="text-xs font-bold">
                 {texts.beta}
               </p>
             </div>
-            <div className="max-w-lg mx-auto px-6 py-4 bg-gray-50 border border-gray-200 rounded-xl">
-              <p className="text-sm text-gray-700 leading-relaxed font-medium">
+            <div className="max-w-lg mx-auto px-4 py-3 sm:px-6 sm:py-4 bg-gray-50 border border-gray-200 rounded-xl">
+              <p className="text-xs sm:text-sm text-gray-700 leading-relaxed font-medium">
                 {texts.betaMessage}
               </p>
             </div>
           </div>
 
           {/* Features Grid */}
-          <div className="grid md:grid-cols-3 gap-8 mb-16 animate-fade" style={{animationDelay: '0.2s'}}>
-            <div className="p-8 border border-gray-200 rounded-2xl bg-white hover:border-gray-300 transition-all">
-              <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center mb-6">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+          <div className="grid md:grid-cols-3 gap-4 sm:gap-6 md:gap-8 mb-6 sm:mb-8 md:mb-10 animate-fade" style={{animationDelay: '0.2s'}}>
+            <div className="p-5 sm:p-6 md:p-8 border border-gray-200 rounded-2xl bg-white hover:border-gray-300 transition-all">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-black rounded-xl flex items-center justify-center mb-4 sm:mb-6">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" className="sm:w-5 sm:h-5">
                   <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
                 </svg>
               </div>
-              <h3 className="text-base font-bold text-black mb-3">{texts.feature1Title}</h3>
-              <p className="text-sm text-gray-600 leading-relaxed">
+              <h3 className="text-sm sm:text-base font-bold text-black mb-2 sm:mb-3">{texts.feature1Title}</h3>
+              <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
                 {texts.feature1Desc}
               </p>
             </div>
 
-            <div className="p-8 border border-gray-200 rounded-2xl bg-white hover:border-gray-300 transition-all">
-              <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center mb-6">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+            <div className="p-5 sm:p-6 md:p-8 border border-gray-200 rounded-2xl bg-white hover:border-gray-300 transition-all">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-black rounded-xl flex items-center justify-center mb-4 sm:mb-6">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" className="sm:w-5 sm:h-5">
                   <circle cx="12" cy="12" r="10"/>
                   <polyline points="12 6 12 12 16 14"/>
                 </svg>
               </div>
-              <h3 className="text-base font-bold text-black mb-3">{texts.feature2Title}</h3>
-              <p className="text-sm text-gray-600 leading-relaxed">
+              <h3 className="text-sm sm:text-base font-bold text-black mb-2 sm:mb-3">{texts.feature2Title}</h3>
+              <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
                 {texts.feature2Desc}
               </p>
             </div>
 
-            <div className="p-8 border border-gray-200 rounded-2xl bg-white hover:border-gray-300 transition-all">
-              <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center mb-6">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+            <div className="p-5 sm:p-6 md:p-8 border border-gray-200 rounded-2xl bg-white hover:border-gray-300 transition-all">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-black rounded-xl flex items-center justify-center mb-4 sm:mb-6">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" className="sm:w-5 sm:h-5">
                   <path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
                 </svg>
               </div>
-              <h3 className="text-base font-bold text-black mb-3">{texts.feature3Title}</h3>
-              <p className="text-sm text-gray-600 leading-relaxed">
+              <h3 className="text-sm sm:text-base font-bold text-black mb-2 sm:mb-3">{texts.feature3Title}</h3>
+              <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
                 {texts.feature3Desc}
               </p>
             </div>
           </div>
 
           {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-fade" style={{animationDelay: '0.4s'}}>
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center animate-fade" style={{animationDelay: '0.4s'}}>
             <button 
               onClick={() => { setIsLogin(true); setView('auth'); }} 
-              className="w-full sm:w-auto px-10 py-4 bg-black text-white font-bold rounded-xl text-sm transition-all hover:bg-gray-800 active:scale-98"
+              className="w-full sm:w-auto px-8 sm:px-10 py-3 sm:py-4 bg-black text-white font-bold rounded-xl text-sm transition-all hover:bg-gray-800 active:scale-98"
             >
               {texts.login}
             </button>
             <button 
               onClick={() => { setIsLogin(false); setView('auth'); }} 
-              className="w-full sm:w-auto px-10 py-4 border border-gray-300 text-black font-bold rounded-xl text-sm transition-all hover:bg-gray-50 active:scale-98"
+              className="w-full sm:w-auto px-8 sm:px-10 py-3 sm:py-4 border border-gray-300 text-black font-bold rounded-xl text-sm transition-all hover:bg-gray-50 active:scale-98"
             >
               {texts.register}
             </button>
           </div>
 
           {/* Footer info */}
-          <div className="mt-12 text-center animate-fade" style={{animationDelay: '0.6s'}}>
+          <div className="mt-6 sm:mt-8 md:mt-10 text-center animate-fade" style={{animationDelay: '0.6s'}}>
             <p className="text-xs text-gray-400">
               {texts.footer}
             </p>
