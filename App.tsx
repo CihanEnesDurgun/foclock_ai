@@ -5,6 +5,19 @@ import { suggestPlan, finalizeTasks, getMotivation, summarizeSession } from './s
 import { authService } from './services/authService';
 import { locales } from './locales';
 
+const DEMO_USER_ID = 'demo-user-id';
+const demoUser: User = {
+  id: DEMO_USER_ID,
+  name: 'Demo Kullanıcı',
+  email: 'demo@foclock.local',
+  field: 'Yazılım',
+  projectTags: [],
+  role: 'user',
+  friends: [],
+  pendingRequests: [],
+  preferences: { theme: 'dark', language: 'tr', notifications: true }
+};
+
 const App: React.FC = () => {
   const [view, setView] = useState<'splash' | 'welcome' | 'auth' | 'home'>('splash');
   const [user, setUser] = useState<User | null>(null);
@@ -66,9 +79,9 @@ const App: React.FC = () => {
     init();
   }, []);
 
-  // Tercihleri veritabanı ile senkronize et
+  // Tercihleri veritabanı ile senkronize et (demo hariç)
   useEffect(() => {
-    if (user && view === 'home') {
+    if (user && view === 'home' && user.id !== DEMO_USER_ID) {
       authService.updatePreferences(user.id, { theme, language: lang, notifications: true });
     }
   }, [theme, lang]);
@@ -90,9 +103,15 @@ const App: React.FC = () => {
     
     if (user && currentTask) {
       const durationMins = Math.floor(sessionDuration / 60);
-      await authService.saveCompletedSession(user.id, currentTask, durationMins);
-      const newStats = await authService.getStats(user.id);
-      setStats(newStats);
+      const isDemo = user.id === DEMO_USER_ID;
+
+      if (!isDemo) {
+        await authService.saveCompletedSession(user.id, currentTask, durationMins);
+        const newStats = await authService.getStats(user.id);
+        setStats(newStats);
+      } else {
+        setStats(prev => [...prev, { task_title: currentTask, duration_minutes: durationMins, completed_at: new Date().toISOString() }]);
+      }
 
       setPlannedTasks(prev => prev.map(tk => {
         if (tk.title === currentTask) {
@@ -100,9 +119,15 @@ const App: React.FC = () => {
         }
         return tk;
       }));
-      
-      const summary = await summarizeSession(currentTask, user.field, lang);
-      setChatMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'assistant', content: summary, timestamp: Date.now() }]);
+
+      try {
+        const summary = isDemo
+          ? `[Demo] "${currentTask}" için ${durationMins} dakikalık odak tamamlandı.`
+          : await summarizeSession(currentTask, user.field, lang);
+        setChatMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'assistant', content: summary, timestamp: Date.now() }]);
+      } catch {
+        setChatMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'assistant', content: `"${currentTask}" tamamlandı (${durationMins} dk).`, timestamp: Date.now() }]);
+      }
     }
   };
 
@@ -124,7 +149,11 @@ const App: React.FC = () => {
           const userStats = await authService.getStats(res.user!.id);
           setStats(userStats);
           setView('home');
-        } else setAuthError(res.error!);
+        } else {
+          const msg = res.error ?? '';
+          const isRateLimit = /rate limit|email rate limit exceeded/i.test(msg);
+          setAuthError(isRateLimit ? t.authErrorRateLimit : msg);
+        }
       } else {
         const res = await authService.register({
           email, password, 
@@ -134,11 +163,21 @@ const App: React.FC = () => {
         if (res.success) {
           setIsLogin(true);
           setAuthError("Kayıt başarılı. Şimdi giriş yap.");
-        } else setAuthError(res.error!);
+        } else {
+          const msg = res.error ?? '';
+          const isRateLimit = /rate limit|email rate limit exceeded/i.test(msg);
+          setAuthError(isRateLimit ? t.authErrorRateLimit : msg);
+        }
       }
     } catch (err) {
       setAuthError("Sistem meşgul. Tekrar dene.");
     } finally { setIsSyncing(false); }
+  };
+
+  const handleDemo = () => {
+    setAuthError('');
+    setUser(demoUser);
+    setView('home');
   };
 
   const handleChat = async () => {
@@ -352,6 +391,7 @@ const App: React.FC = () => {
             {authError && <p className="text-red-500 text-[10px] font-black uppercase text-center bg-red-500/10 py-2 rounded-lg">{authError}</p>}
             <button type="submit" className="w-full py-5 bg-[var(--accent)] text-[var(--accent-text)] font-black rounded-2xl uppercase text-[11px] tracking-widest transition-all hover:brightness-110 active:scale-[0.98] shadow-lg">{isLogin ? t.signIn : t.signUp}</button>
             <button type="button" onClick={() => { setIsLogin(!isLogin); setAuthError(''); }} className="w-full text-xs text-[var(--text-dim)] font-medium hover:text-[var(--text-bright)] py-2">{isLogin ? t.signUp : t.signIn}</button>
+            <button type="button" onClick={handleDemo} className="w-full text-xs text-[var(--text-dim)] font-medium hover:text-[var(--text-bright)] py-2 border border-[var(--border)] rounded-xl mt-2 hover:bg-white/5 transition-all">{t.demoTry}</button>
           </form>
         </div>
       </div>
@@ -433,7 +473,7 @@ const App: React.FC = () => {
              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-gray-200 to-white flex items-center justify-center text-[10px] font-black text-black shadow-sm">{user?.name[0]}</div>
              <h3 className="text-[11px] font-black uppercase tracking-widest text-[var(--text-bright)]">{user?.name}</h3>
            </div>
-           <button onClick={() => authService.logout().then(() => setView('auth'))} className="p-2 rounded-lg hover:bg-red-500/10 text-red-500 transition-all"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg></button>
+           <button onClick={() => authService.logout().then(() => { setUser(null); setView('auth'); })} className="p-2 rounded-lg hover:bg-red-500/10 text-red-500 transition-all"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg></button>
          </div>
          <div className="sidebar-content px-6 py-8">
             {sidebarModule === 'analytics' ? (

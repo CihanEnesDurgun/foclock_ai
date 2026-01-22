@@ -22,6 +22,7 @@ export const locales = {
     notifBody: "Nöral döngü başarıyla işlendi. Mola verin.",
     signIn: "Giriş Yap",
     signUp: "Kayıt Ol",
+    demoTry: "Demo'da dene",
     email: "E-posta",
     password: "Şifre",
     name: "Ad Soyad",
@@ -46,6 +47,7 @@ export const locales = {
     noRequests: "Bekleyen istek yok.",
     noFriends: "Henüz arkadaşın yok. İlk senkronizasyonu başlat.",
     totalSystemsFocus: "SİSTEM TOPLAM ODAK",
+    authErrorRateLimit: "E-posta limiti aşıldı. Lütfen birkaç dakika sonra tekrar deneyin.",
     status: { IDLE: "HAZIR", RUNNING: "AKIŞTA", PAUSED: "DURAKLADI", COMPLETED: "TAMAMLANDI" }
   },
   en: {
@@ -70,6 +72,7 @@ export const locales = {
     notifBody: "Neural cycle processed successfully. Recalibrate now.",
     signIn: "Sign In",
     signUp: "Sign Up",
+    demoTry: "Try Demo",
     email: "Email",
     password: "Password",
     name: "Full Name",
@@ -94,6 +97,7 @@ export const locales = {
     noRequests: "No pending requests.",
     noFriends: "No friends yet. Initiate first sync.",
     totalSystemsFocus: "TOTAL SYSTEMS FOCUS",
+    authErrorRateLimit: "Email rate limit exceeded. Please try again in a few minutes.",
     status: { IDLE: "READY", RUNNING: "FLOWING", PAUSED: "PAUSED", COMPLETED: "COMPLETED" }
   }
 };
