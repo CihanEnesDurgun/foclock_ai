@@ -1,7 +1,14 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Vite'da environment variables için import.meta.env kullanılır
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.GEMINI_API_KEY || (typeof process !== 'undefined' ? process.env.API_KEY : undefined);
+
+if (!apiKey) {
+  console.error('GEMINI_API_KEY is not set. Please set it in Vercel environment variables.');
+}
+
+const ai = new GoogleGenAI({ apiKey: apiKey || '' });
 
 const SCIENTIFIC_CORE = `
 # IDENTITY
