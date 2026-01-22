@@ -102,3 +102,14 @@ Deployment tamamlandıktan sonra:
 - **Build Hataları:** Vercel dashboard'da "Deployments" sekmesinden log'ları kontrol edin
 - **Environment Variables:** Değişkenlerin doğru şekilde ayarlandığından emin olun
 - **404 Hataları:** `vercel.json` dosyasındaki rewrite kurallarının çalıştığını kontrol edin
+
+#### Kayıt ol / Giriş ile ilgili
+
+1. **"new row violates row-level security policy for table profiles"**  
+   Kayıt sırasında bu hata alıyorsanız, Supabase’de `profiles` için RLS politikaları eksik demektir.  
+   `scripts/fix-profiles-rls.sql` dosyasını **Supabase Dashboard → SQL Editor**’da çalıştırın.
+
+2. **"Email not confirmed"**  
+   Girişte bu hata çıkıyorsa, Supabase Auth e-posta doğrulaması açıktır.  
+   - İlgili e-postaya gelen doğrulama linkine tıklayın, veya  
+   - **Supabase → Authentication → Providers → Email** içinde "Confirm email" ayarını geçici olarak kapatıp test edin.
