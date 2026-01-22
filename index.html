@@ -1,0 +1,348 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FoClock AI | Neural Focus Engine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-app: #ffffff;
+            --bg-sidebar: #f8f8f8;
+            --bg-chat: #ffffff;
+            --border: #eeeeee;
+            --border-active: #dddddd;
+            --text-main: #666666;
+            --text-bright: #000000;
+            --text-dim: #bbbbbb;
+            --accent: #000000;
+            --accent-text: #ffffff;
+            --ring-track: #f0f0f0;
+            --status-flow: #22c55e;
+            --status-rest: #f59e0b;
+            --status-idle: #94a3b8;
+        }
+
+        [data-theme='dark'] {
+            --bg-app: #050505;
+            --bg-sidebar: #080808;
+            --bg-chat: #0a0a0a;
+            --border: #1a1a1a;
+            --border-active: #333333;
+            --text-main: #999999;
+            --text-bright: #ffffff;
+            --text-dim: #444444;
+            --accent: #ffffff;
+            --accent-text: #000000;
+            --ring-track: #111111;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-app);
+            color: var(--text-main);
+            transition: background-color 0.4s ease;
+            height: 100vh;
+            width: 100vw;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .app-shell {
+            display: grid;
+            grid-template-columns: 360px 1fr 340px;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+        }
+
+        .sidebar-left {
+            background-color: var(--bg-sidebar);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            height: 100%;
+        }
+
+        .main-focus {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            background-color: var(--bg-app);
+            padding: 4rem 2rem 6rem 2rem;
+            height: 100%;
+            overflow: hidden;
+            z-index: 10;
+        }
+
+        .right-zone-v2 {
+            background-color: var(--bg-sidebar);
+            border-left: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .sidebar-header {
+            padding: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-sidebar);
+            z-index: 20;
+        }
+
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .watermark {
+            position: absolute;
+            top: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-transform: uppercase;
+            font-weight: 900;
+            letter-spacing: 1.2em;
+            font-size: 11px;
+            color: var(--text-bright);
+            opacity: 0.05;
+            white-space: nowrap;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .chat-section {
+            flex: 1.5;
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem;
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        .queue-section {
+            flex: 1;
+            background-color: var(--bg-chat);
+            border-top: 1px solid var(--border);
+            padding: 1.5rem;
+            overflow-y: auto;
+            min-height: 0;
+        }
+
+        .chat-history {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .timer-container {
+            position: relative;
+            width: 400px;
+            height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .ring-svg {
+            transform: rotate(-90deg);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .ring-circle {
+            transition: stroke-dashoffset 1s linear;
+        }
+
+        .timer-text {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: var(--border-active);
+            border-radius: 10px;
+        }
+
+        .tabular-nums {
+            font-variant-numeric: tabular-nums;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        .footer-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 1rem 3rem;
+            border-top: 1px solid var(--border);
+            background-color: var(--bg-app);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            opacity: 0.4;
+            font-size: 10px;
+            font-weight: 800;
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        .btn-nav {
+          width: 100%;
+          text-align: left;
+          padding: 16px 20px;
+          border-radius: 16px;
+          font-size: 11px;
+          font-weight: 900;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          border: 1px solid transparent;
+          transition: all 0.2s;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          color: var(--text-dim);
+        }
+
+        .btn-nav:hover {
+          background: var(--bg-app);
+          color: var(--text-bright);
+          border-color: var(--border);
+        }
+
+        .btn-nav.active {
+          background: var(--bg-app);
+          color: var(--text-bright);
+          border-color: var(--border);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+        }
+
+        .profile-card {
+          padding: 24px;
+          background: var(--bg-app);
+          border: 1px solid var(--border);
+          border-radius: 24px;
+          display: flex;
+          align-items: center;
+          gap: 16px;
+        }
+
+        .input-auth {
+          width: 100%;
+          background: transparent;
+          border-bottom: 2px solid var(--border);
+          padding: 12px 0;
+          font-size: 14px;
+          color: var(--text-bright);
+          transition: border-color 0.3s;
+        }
+
+        .input-auth:focus {
+          outline: none;
+          border-color: var(--text-bright);
+        }
+
+        .chart-bar {
+          flex: 1;
+          background: var(--border);
+          border-radius: 4px 4px 0 0;
+          position: relative;
+          transition: all 0.3s;
+        }
+        .chart-bar:hover {
+          background: var(--text-bright);
+        }
+
+        .status-flow { background-color: var(--status-flow); }
+        .status-rest { background-color: var(--status-rest); }
+        .status-idle { background-color: var(--status-idle); opacity: 0.4; }
+
+        /* Sync Loading Overlay */
+        .sync-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.9);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            backdrop-filter: blur(10px);
+        }
+
+        .loader-dots {
+            display: flex;
+            gap: 8px;
+            margin-top: 20px;
+        }
+
+        .dot {
+            width: 6px;
+            height: 6px;
+            background: white;
+            border-radius: 50%;
+            animation: dotPulse 1.5s infinite ease-in-out;
+        }
+
+        .dot:nth-child(2) { animation-delay: 0.2s; }
+        .dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes dotPulse {
+            0%, 100% { transform: scale(1); opacity: 0.3; }
+            50% { transform: scale(1.5); opacity: 1; }
+        }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.39.7",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body>
+    <div id="root"></div>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>
