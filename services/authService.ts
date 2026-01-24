@@ -60,15 +60,20 @@ export const authService = {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     
     if (error) {
+      console.error('Login error:', error);
+      
       // Email confirmation hatası için özel mesaj
       if (error.message.includes('Email not confirmed') || error.message.includes('email_not_confirmed')) {
         return { success: false, error: 'Email adresinizi doğrulamanız gerekiyor. Lütfen e-postanızı kontrol edin.' };
       }
       // Invalid credentials için Türkçe mesaj
-      if (error.message.includes('Invalid login credentials') || error.message.includes('invalid_credentials')) {
-        return { success: false, error: 'Geçersiz e-posta veya şifre.' };
+      if (error.message.includes('Invalid login credentials') || 
+          error.message.includes('invalid_credentials') ||
+          error.message.includes('Invalid login') ||
+          error.status === 400) {
+        return { success: false, error: 'Geçersiz e-posta veya şifre. Lütfen bilgilerinizi kontrol edin.' };
       }
-      return { success: false, error: error.message };
+      return { success: false, error: error.message || 'Giriş yapılamadı. Lütfen tekrar deneyin.' };
     }
 
     if (!data.user) {
