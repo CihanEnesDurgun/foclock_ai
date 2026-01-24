@@ -15,6 +15,7 @@ export enum TimerMode {
 export interface User {
   id: string;
   name: string;
+  username?: string;
   email: string;
   password?: string;
   field: string;
@@ -27,6 +28,15 @@ export interface User {
     language: 'tr' | 'en';
     notifications: boolean;
   };
+}
+
+export interface FriendRequest {
+  id: string;
+  from_user_id: string;
+  to_user_id: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  created_at: string;
+  from_user?: { id: string; username: string; name: string };
 }
 
 export interface PomodoroSession {
