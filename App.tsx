@@ -1,8 +1,19 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { TimerStatus, PomodoroSession, PlannedTask, TimerMode, ChatMessage, User } from './types';
+import { TimerStatus, PomodoroSession, PlannedTask, TimerMode, ChatMessage, User, FriendActivity, FriendRequest } from './types';
 import { suggestPlan, finalizeTasks, getMotivation, summarizeSession, formatMessage } from './services/geminiService';
 import { authService } from './services/authService';
+import { getFriendActivities } from './services/friendActivityService';
+import {
+  checkUsernameAvailable,
+  validateUsername,
+  searchByUsername,
+  sendFriendRequest,
+  getIncomingFriendRequests,
+  acceptFriendRequest,
+  rejectFriendRequest,
+  type SearchUser,
+} from './services/friendService';
 import { locales } from './locales';
 import { getQuote, quoteCount, ROTATION_INTERVAL_MS } from './quotes';
 
@@ -26,7 +37,7 @@ const App: React.FC = () => {
   const [authError, setAuthError] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
   
-  const [sidebarModule, setSidebarModule] = useState<'default' | 'analytics' | 'settings'>('default');
+  const [sidebarModule, setSidebarModule] = useState<'default' | 'analytics' | 'settings' | 'social' | 'account'>('default');
   const [lang, setLang] = useState<'tr' | 'en'>('tr');
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [timeLeft, setTimeLeft] = useState(1500);
@@ -42,6 +53,17 @@ const App: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [queueOpen, setQueueOpen] = useState(true);
   const [quoteIndex, setQuoteIndex] = useState(0);
+  const [friendActivities, setFriendActivities] = useState<FriendActivity[]>([]);
+  const [loadingFriends, setLoadingFriends] = useState(false);
+  const [registerUsername, setRegisterUsername] = useState('');
+  const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'ok' | 'taken' | 'invalid'>('idle');
+  const usernameCheckRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [accountSearchQuery, setAccountSearchQuery] = useState('');
+  const [accountSearchResults, setAccountSearchResults] = useState<SearchUser[]>([]);
+  const [accountSearching, setAccountSearching] = useState(false);
+  const [incomingRequests, setIncomingRequests] = useState<FriendRequest[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(false);
+  const [addingUserId, setAddingUserId] = useState<string | null>(null);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -97,6 +119,45 @@ const App: React.FC = () => {
     }, ROTATION_INTERVAL_MS);
     return () => clearInterval(id);
   }, [view, lang]);
+
+  // Arkadaş etkinliği: sağ menüde social açıldığında veri çek
+  useEffect(() => {
+    if (sidebarModule !== 'social' || !user) return;
+    setLoadingFriends(true);
+    getFriendActivities(user.id, lang)
+      .then(setFriendActivities)
+      .finally(() => setLoadingFriends(false));
+  }, [sidebarModule, user?.id, lang]);
+
+  // Hesap: arkadaşlık isteklerini çek
+  useEffect(() => {
+    if (sidebarModule !== 'account' || !user || user.id === DEMO_USER_ID) return;
+    setLoadingRequests(true);
+    getIncomingFriendRequests(user.id)
+      .then(setIncomingRequests)
+      .finally(() => setLoadingRequests(false));
+  }, [sidebarModule, user?.id]);
+
+  // Kullanıcı adı kullanılabilirlik (kayıt formu, debounce)
+  useEffect(() => {
+    if (view !== 'auth' || !registerUsername.trim()) {
+      setUsernameStatus('idle');
+      return;
+    }
+    const { ok, error } = validateUsername(registerUsername);
+    if (!ok) {
+      setUsernameStatus('invalid');
+      return;
+    }
+    setUsernameStatus('checking');
+    if (usernameCheckRef.current) clearTimeout(usernameCheckRef.current);
+    usernameCheckRef.current = setTimeout(async () => {
+      usernameCheckRef.current = null;
+      const available = await checkUsernameAvailable(registerUsername);
+      setUsernameStatus(available ? 'ok' : 'taken');
+    }, 400);
+    return () => { if (usernameCheckRef.current) clearTimeout(usernameCheckRef.current); };
+  }, [view, registerUsername]);
 
   useEffect(() => {
     if (status === TimerStatus.RUNNING && timeLeft > 0) {
@@ -167,22 +228,33 @@ const App: React.FC = () => {
           setAuthError(isRateLimit ? t.authErrorRateLimit : msg);
         }
       } else {
+        const username = (formData.get('username') as string)?.trim() ?? '';
+        if (usernameStatus !== 'ok') {
+          setAuthError(usernameStatus === 'taken' ? t.usernameTaken : t.usernameInvalid);
+          setIsSyncing(false);
+          return;
+        }
         const res = await authService.register({
-          email, password, 
-          name: formData.get('name') as string, 
-          field: formData.get('field') as string
+          email, password,
+          name: formData.get('name') as string,
+          field: formData.get('field') as string,
+          username,
         });
         if (res.success) {
           setIsLogin(true);
-          setAuthError("Kayıt başarılı. Şimdi giriş yap.");
+          setRegisterUsername('');
+          setUsernameStatus('idle');
+          setAuthError(lang === 'tr' ? 'Kayıt başarılı. Şimdi giriş yap.' : 'Registration successful. Sign in now.');
         } else {
           const msg = res.error ?? '';
-          const isRateLimit = /rate limit|email rate limit exceeded/i.test(msg);
-          setAuthError(isRateLimit ? t.authErrorRateLimit : msg);
+          if (msg === 'username_taken') setAuthError(t.usernameTaken);
+          else if (/username|invalid/.test(msg)) setAuthError(t.usernameInvalid);
+          else if (/rate limit|email rate limit exceeded/i.test(msg)) setAuthError(t.authErrorRateLimit);
+          else setAuthError(msg);
         }
       }
     } catch (err) {
-      setAuthError("Sistem meşgul. Tekrar dene.");
+      setAuthError(lang === 'tr' ? 'Sistem meşgul. Tekrar dene.' : 'System busy. Try again.');
     } finally { setIsSyncing(false); }
   };
 
@@ -190,6 +262,39 @@ const App: React.FC = () => {
     setAuthError('');
     setUser(demoUser);
     setView('home');
+  };
+
+  const handleAccountSearch = async () => {
+    const q = accountSearchQuery.trim();
+    if (q.length < 2 || !user || user.id === DEMO_USER_ID) return;
+    setAccountSearching(true);
+    const list = await searchByUsername(q);
+    setAccountSearchResults(list);
+    setAccountSearching(false);
+  };
+
+  const handleAddFriend = async (toUserId: string) => {
+    if (!user || user.id === DEMO_USER_ID) return;
+    setAddingUserId(toUserId);
+    const { success, error } = await sendFriendRequest(user.id, toUserId);
+    setAddingUserId(null);
+    if (success) setAccountSearchResults((prev) => prev.filter((u) => u.id !== toUserId));
+    return { success, error };
+  };
+
+  const handleAcceptRequest = async (requestId: string) => {
+    if (!user || user.id === DEMO_USER_ID) return;
+    const { success } = await acceptFriendRequest(requestId, user.id);
+    if (success) {
+      setIncomingRequests((prev) => prev.filter((r) => r.id !== requestId));
+      setUser((u) => (!u ? u : { ...u, friends: [...u.friends, (incomingRequests.find((r) => r.id === requestId)?.from_user_id ?? '')].filter(Boolean) }));
+    }
+  };
+
+  const handleRejectRequest = async (requestId: string) => {
+    if (!user || user.id === DEMO_USER_ID) return;
+    const { success } = await rejectFriendRequest(requestId, user.id);
+    if (success) setIncomingRequests((prev) => prev.filter((r) => r.id !== requestId));
   };
 
   const handleChat = async () => {
@@ -395,14 +500,31 @@ const App: React.FC = () => {
           <h2 className="text-3xl font-black mb-10 text-[var(--text-bright)] uppercase tracking-tighter text-center">{isLogin ? t.signIn : t.signUp}</h2>
           <form onSubmit={handleAuth} className="space-y-6">
             {!isLogin && (
-              <><input name="name" placeholder={t.name} className="input-auth" required />
-              <input name="field" placeholder={t.engineeringField} className="input-auth" required /></>
+              <>
+                <input name="name" placeholder={t.name} className="input-auth" required />
+                <input name="field" placeholder={t.engineeringField} className="input-auth" required />
+                <div>
+                  <input
+                    name="username"
+                    placeholder={t.usernamePlaceholder}
+                    className="input-auth"
+                    required
+                    value={registerUsername}
+                    onChange={(e) => setRegisterUsername(e.target.value)}
+                    autoComplete="username"
+                  />
+                  {usernameStatus === 'checking' && <p className="text-[10px] text-[var(--text-dim)] mt-1">{t.loading}</p>}
+                  {usernameStatus === 'ok' && <p className="text-[10px] text-[var(--status-flow)] mt-1">✓</p>}
+                  {usernameStatus === 'taken' && <p className="text-[10px] text-red-500 mt-1">{t.usernameTaken}</p>}
+                  {usernameStatus === 'invalid' && <p className="text-[10px] text-red-500 mt-1">{t.usernameInvalid}</p>}
+                </div>
+              </>
             )}
             <input name="email" type="email" placeholder={t.email} className="input-auth" required />
             <input name="password" type="password" placeholder={t.password} className="input-auth" required />
             {authError && <p className="text-red-500 text-[10px] font-black uppercase text-center bg-red-500/10 py-2 rounded-lg">{authError}</p>}
             <button type="submit" className="w-full py-5 bg-[var(--accent)] text-[var(--accent-text)] font-black rounded-2xl uppercase text-[11px] tracking-widest transition-all hover:brightness-110 active:scale-[0.98] shadow-lg">{isLogin ? t.signIn : t.signUp}</button>
-            <button type="button" onClick={() => { setIsLogin(!isLogin); setAuthError(''); }} className="w-full text-xs text-[var(--text-dim)] font-medium hover:text-[var(--text-bright)] py-2">{isLogin ? t.signUp : t.signIn}</button>
+            <button type="button" onClick={() => { setIsLogin(!isLogin); setAuthError(''); setRegisterUsername(''); setUsernameStatus('idle'); }} className="w-full text-xs text-[var(--text-dim)] font-medium hover:text-[var(--text-bright)] py-2">{isLogin ? t.signUp : t.signIn}</button>
             <button type="button" onClick={handleDemo} className="w-full text-xs text-[var(--text-dim)] font-medium hover:text-[var(--text-bright)] py-2 border border-[var(--border)] rounded-xl mt-2 hover:bg-white/5 transition-all">{t.demoTry}</button>
           </form>
         </div>
@@ -550,6 +672,135 @@ const App: React.FC = () => {
                   </div>
                   <button className="w-full mt-8 py-4 border border-[var(--border)] rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/5 transition-all" onClick={() => setSidebarModule('default')}>Geri Dön</button>
                </div>
+            ) : sidebarModule === 'social' ? (
+              <div className="animate-fade">
+                <div className="flex items-center justify-between mb-8">
+                  <h4 className="text-[11px] font-black text-[var(--text-dim)] uppercase tracking-widest">{t.social}</h4>
+                </div>
+                {loadingFriends ? (
+                  <div className="py-20 text-center">
+                    <p className="text-[10px] italic opacity-40 uppercase tracking-widest">{t.loading}</p>
+                  </div>
+                ) : friendActivities.length === 0 ? (
+                  <div className="py-20 text-center">
+                    <p className="text-[10px] italic opacity-40 uppercase tracking-widest px-4">{t.friendActivityEmpty}</p>
+                    <p className="text-[9px] text-[var(--text-dim)] mt-4 opacity-60">{t.noFriends}</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {friendActivities.map((fa) => {
+                      const isActive = fa.status === 'flow';
+                      const elapsed = fa.totalDuration > 0 ? Math.floor((fa.totalDuration - fa.timeRemaining) / 60) : 0;
+                      const totalMins = Math.floor(fa.totalDuration / 60);
+                      return (
+                        <div key={fa.id} className="p-4 border border-[var(--border)] rounded-2xl bg-white/5 shadow-sm">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-white/20 to-white/5 flex items-center justify-center text-[11px] font-black text-[var(--text-bright)] shrink-0">
+                              {fa.name[0]}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="text-[10px] font-black uppercase tracking-tight text-[var(--text-bright)] truncate">{fa.name}</div>
+                              <div className="text-[9px] text-[var(--text-dim)] truncate mt-0.5">{fa.activity}</div>
+                              <div className="flex items-center gap-2 mt-2">
+                                {isActive ? (
+                                  <>
+                                    <span className={`w-1.5 h-1.5 rounded-full ${fa.status === 'flow' ? 'bg-[var(--status-flow)] animate-pulse' : 'bg-[var(--status-idle)]'}`} />
+                                    <span className="text-[9px] font-bold uppercase text-[var(--text-dim)]">
+                                      {elapsed} / {totalMins} {t.unitMins}
+                                    </span>
+                                  </>
+                                ) : (
+                                  <span className="text-[9px] font-bold uppercase text-[var(--text-dim)]">
+                                    {totalMins} {t.unitMins}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                <button className="w-full mt-8 py-4 border border-[var(--border)] rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/5 transition-all" onClick={() => setSidebarModule('default')}>{t.back}</button>
+              </div>
+            ) : sidebarModule === 'account' ? (
+              <div className="animate-fade">
+                <h4 className="text-[11px] font-black text-[var(--text-dim)] uppercase tracking-widest mb-6">{t.account}</h4>
+                {user?.id === DEMO_USER_ID ? (
+                  <div className="py-12 text-center">
+                    <p className="text-[10px] italic opacity-40 uppercase tracking-widest">{t.noFriends}</p>
+                    <p className="text-[9px] text-[var(--text-dim)] mt-4 opacity-60">{lang === 'tr' ? 'Giriş yaparak arkadaş ekleyebilirsiniz.' : 'Sign in to add friends.'}</p>
+                    <button className="w-full mt-8 py-4 border border-[var(--border)] rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/5 transition-all" onClick={() => setSidebarModule('default')}>{t.back}</button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex gap-2 mb-6">
+                      <input
+                        type="text"
+                        value={accountSearchQuery}
+                        onChange={(e) => setAccountSearchQuery(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleAccountSearch()}
+                        placeholder={t.searchUsername}
+                        className="flex-1 bg-white/5 border border-[var(--border)] rounded-xl px-4 py-2.5 text-[10px] outline-none focus:border-[var(--text-bright)] transition-all"
+                      />
+                      <button type="button" onClick={handleAccountSearch} disabled={accountSearching || accountSearchQuery.trim().length < 2} className="px-4 py-2.5 rounded-xl bg-[var(--accent)] text-[var(--accent-text)] text-[10px] font-black uppercase disabled:opacity-40 transition-all">
+                        {accountSearching ? '…' : t.search}
+                      </button>
+                    </div>
+                    {accountSearchResults.length > 0 && (
+                      <div className="space-y-2 mb-6">
+                        {accountSearchResults.map((u) => (
+                          <div key={u.id} className="p-3 border border-[var(--border)] rounded-xl flex items-center justify-between bg-white/5">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-white/20 to-white/5 flex items-center justify-center text-[10px] font-black text-[var(--text-bright)] shrink-0">{u.name[0]}</div>
+                              <div className="min-w-0">
+                                <div className="text-[10px] font-black uppercase truncate">{u.username || u.name}</div>
+                                <div className="text-[9px] text-[var(--text-dim)] truncate">{u.name}</div>
+                              </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => handleAddFriend(u.id)}
+                                disabled={!!addingUserId || user?.friends.includes(u.id)}
+                                className="px-3 py-1.5 rounded-lg bg-[var(--accent)] text-[var(--accent-text)] text-[9px] font-black uppercase disabled:opacity-40 hover:opacity-90 transition-all shrink-0"
+                              >
+                                {addingUserId === u.id ? '…' : user?.friends.includes(u.id) ? t.alreadyFriends : t.addFriend}
+                              </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div className="pt-4 border-t border-[var(--border)]">
+                      <h5 className="text-[10px] font-black text-[var(--text-dim)] uppercase tracking-widest mb-4">{t.friendRequests}</h5>
+                      {loadingRequests ? (
+                        <p className="text-[10px] italic opacity-40">{t.loading}</p>
+                      ) : incomingRequests.length === 0 ? (
+                        <p className="text-[10px] italic opacity-40">{t.noFriendRequests}</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {incomingRequests.map((r) => (
+                            <div key={r.id} className="p-3 border border-[var(--border)] rounded-xl flex items-center justify-between bg-white/5">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-white/20 to-white/5 flex items-center justify-center text-[10px] font-black text-[var(--text-bright)] shrink-0">{(r.from_user?.name ?? '')[0]}</div>
+                                <div className="min-w-0">
+                                  <div className="text-[10px] font-black uppercase truncate">{r.from_user?.username || r.from_user?.name}</div>
+                                  <div className="text-[9px] text-[var(--text-dim)] truncate">{r.from_user?.name}</div>
+                                </div>
+                              </div>
+                              <div className="flex gap-2 shrink-0">
+                                <button type="button" onClick={() => handleAcceptRequest(r.id)} className="px-3 py-1.5 rounded-lg bg-[var(--status-flow)]/20 text-[var(--status-flow)] text-[9px] font-black uppercase hover:bg-[var(--status-flow)]/30 transition-all">{t.accept}</button>
+                                <button type="button" onClick={() => handleRejectRequest(r.id)} className="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-500 text-[9px] font-black uppercase hover:bg-red-500/20 transition-all">{t.reject}</button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <button className="w-full mt-8 py-4 border border-[var(--border)] rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/5 transition-all" onClick={() => setSidebarModule('default')}>{t.back}</button>
+                  </>
+                )}
+              </div>
             ) : sidebarModule === 'settings' ? (
               <div className="animate-fade">
                 <h4 className="text-[11px] font-black text-[var(--text-dim)] uppercase tracking-widest mb-8">SİSTEM AYARLARI</h4>
@@ -572,13 +823,21 @@ const App: React.FC = () => {
               <div className="flex flex-col gap-6 animate-fade">
                 <div className="p-8 border border-[var(--border)] rounded-[2.5rem] bg-gradient-to-br from-white/5 to-transparent shadow-sm relative overflow-hidden group">
                     <div className="absolute -right-4 -top-4 w-20 h-20 bg-[var(--accent)] opacity-5 rounded-full blur-2xl group-hover:opacity-10 transition-all"></div>
-                    <div className="text-[10px] font-black text-[var(--text-dim)] mb-3 uppercase tracking-[0.3em]">Cognitive Specialization</div>
+                    <div className="text-[10px] font-black text-[var(--text-dim)] mb-3 uppercase tracking-[0.3em]">{t.cognitiveSpecialization}</div>
                     <div className="text-sm font-black uppercase text-[var(--text-bright)] tracking-tight">{user?.field}</div>
                 </div>
                 <nav className="flex flex-col gap-3">
                     <button className="btn-nav py-5 px-6 border border-[var(--border)] rounded-[1.5rem] hover:shadow-md" onClick={() => setSidebarModule('analytics')}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
                       {t.history}
+                    </button>
+                    <button className="btn-nav py-5 px-6 border border-[var(--border)] rounded-[1.5rem] hover:shadow-md" onClick={() => setSidebarModule('social')}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                      {t.social}
+                    </button>
+                    <button className="btn-nav py-5 px-6 border border-[var(--border)] rounded-[1.5rem] hover:shadow-md" onClick={() => setSidebarModule('account')}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                      {t.account}
                     </button>
                     <button className="btn-nav py-5 px-6 border border-[var(--border)] rounded-[1.5rem] hover:shadow-md" onClick={() => setSidebarModule('settings')}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>

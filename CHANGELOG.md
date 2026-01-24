@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.2.0] – Username & Friends (2025-01-24)
+
+### Username & Registration
+
+- **Username at signup:** Required, unique, 3–30 chars (letters, numbers, underscore). Stored in `profiles` as `username` / `username_lower`.
+- **Availability check:** Debounced (400ms) check before submit; real-time feedback (✓ / taken / invalid).
+- **SQL migration:** `scripts/username-and-friends.sql` – run in Supabase SQL Editor before testing.
+
+### Friends & Account
+
+- **Account (HESAP) menu:** New right-sidebar module. Search users by username, send friend requests, view incoming requests, accept/reject.
+- **Friend requests:** `friend_requests` table, RLS, RPCs `check_username_available`, `search_users_by_username`, `get_incoming_friend_requests`.
+- **Auth:** Register includes username; login/session load `user.friends` via `getFriendIds`. Shared Supabase client in `services/supabase.ts`.
+
+### Files Added
+
+- `scripts/username-and-friends.sql`, `services/supabase.ts`, `services/friendService.ts`, `services/friendActivityService.ts` (mock).
+
+---
+
 ## [1.1.0] – V1.1 B (2025-01-24)
 
 ### Visual & UX

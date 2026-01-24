@@ -1,63 +1,41 @@
 
-import { createClient } from '@supabase/supabase-js';
-import { User, PomodoroSession } from '../types';
-
-const SUPABASE_URL = 'https://rfalpcaqomscnoumnjhy.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_w_e-t5CQ55JxjiOovuYlJg_HSKXvltB';
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+import { User } from '../types';
+import { supabase } from './supabase';
+import { checkUsernameAvailable, validateUsername, getFriendIds } from './friendService';
 
 export const authService = {
   register: async (userData: Partial<User>): Promise<{ success: boolean; error?: string }> => {
-    // Metadata ile signUp yap (trigger için name ve field bilgisi)
+    const username = typeof userData.username === 'string' ? userData.username.trim() : '';
+    const { ok: valid, error: validationError } = validateUsername(username);
+    if (!valid) return { success: false, error: validationError ?? 'invalid_username' };
+
+    const available = await checkUsernameAvailable(username);
+    if (!available) return { success: false, error: 'username_taken' };
+
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: userData.email!,
       password: userData.password!,
       options: {
-        data: {
-          name: userData.name,
-          field: userData.field
-        }
-      }
+        data: { name: userData.name, field: userData.field, username },
+      },
     });
 
     if (authError) {
-      console.error('SignUp error:', authError);
-      // 500 hatası için özel mesaj
       if (authError.status === 500 || authError.message.includes('Internal Server Error')) {
-        return { success: false, error: 'Sunucu hatası. Lütfen tekrar deneyin veya daha sonra tekrar deneyin.' };
+        return { success: false, error: 'Sunucu hatası. Lütfen tekrar deneyin.' };
       }
       return { success: false, error: authError.message };
     }
 
-    // Eğer database trigger kullanıyorsanız, aşağıdaki manuel insert'e gerek yok
-    // Trigger otomatik olarak profil oluşturacak
-    
-    // Trigger yoksa veya trigger başarısız olursa manuel insert (fallback)
     if (authData.user) {
-      // Session'ın hazır olmasını bekle (email confirmation kapalıysa session hemen gelir)
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      // Eğer session yoksa, kısa bir süre bekle ve tekrar dene
-      if (!session) {
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
-
-      // Trigger varsa bu insert başarısız olabilir (duplicate key), bu normal
-      // Trigger yoksa bu insert çalışacak
-      const { error: profileError } = await supabase.from('profiles').insert([
-        { 
-          id: authData.user.id, 
-          name: userData.name, 
-          field: userData.field,
-          preferences: { theme: 'dark', language: 'tr', notifications: true },
-          project_tags: []
-        }
-      ]).select();
-      
-      // Sadece gerçek hataları döndür (duplicate key hatası normal, trigger zaten oluşturmuştur)
-      if (profileError && !profileError.message.includes('duplicate key') && !profileError.message.includes('violates row-level security')) {
-        return { success: false, error: profileError.message };
+      let session = (await supabase.auth.getSession()).data.session;
+      if (!session) await new Promise((r) => setTimeout(r, 500));
+      session = (await supabase.auth.getSession()).data.session;
+      if (session) {
+        await supabase.from('profiles').update({
+          username,
+          username_lower: username.toLowerCase(),
+        }).eq('id', authData.user.id);
       }
     }
     return { success: true };
@@ -100,16 +78,18 @@ export const authService = {
       // Profil okunamazsa bile giriş yapılabilir, varsayılan değerler kullanılır
     }
 
+    const friends = await getFriendIds(data.user.id);
     const user: User = {
       id: data.user.id,
       email: data.user.email!,
       name: profile?.name || data.user.user_metadata?.name || 'User',
+      username: profile?.username ?? undefined,
       field: profile?.field || data.user.user_metadata?.field || 'General',
       role: 'user',
-      friends: [],
-      pendingRequests: [],
+      friends,
+      pendingRequests: [], // filled when opening Account UI
       projectTags: profile?.project_tags || [],
-      preferences: profile?.preferences || { theme: 'dark', language: 'tr', notifications: true }
+      preferences: profile?.preferences || { theme: 'dark', language: 'tr', notifications: true },
     };
     return { success: true, user };
   },
@@ -125,16 +105,18 @@ export const authService = {
     const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
     if (!profile) return null;
 
+    const friends = await getFriendIds(session.user.id);
     return {
       id: session.user.id,
       email: session.user.email!,
       name: profile.name,
+      username: profile.username ?? undefined,
       field: profile.field,
       role: 'user',
-      friends: [],
+      friends,
       pendingRequests: [],
       projectTags: profile.project_tags || [],
-      preferences: profile.preferences || { theme: 'dark', language: 'tr', notifications: true }
+      preferences: profile.preferences || { theme: 'dark', language: 'tr', notifications: true },
     };
   },
 
