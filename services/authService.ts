@@ -58,15 +58,41 @@ export const authService = {
 
   login: async (email: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) return { success: false, error: error.message };
+    
+    if (error) {
+      // Email confirmation hatası için özel mesaj
+      if (error.message.includes('Email not confirmed') || error.message.includes('email_not_confirmed')) {
+        return { success: false, error: 'Email adresinizi doğrulamanız gerekiyor. Lütfen e-postanızı kontrol edin.' };
+      }
+      // Invalid credentials için Türkçe mesaj
+      if (error.message.includes('Invalid login credentials') || error.message.includes('invalid_credentials')) {
+        return { success: false, error: 'Geçersiz e-posta veya şifre.' };
+      }
+      return { success: false, error: error.message };
+    }
 
-    const { data: profile } = await supabase.from('profiles').select('*').eq('id', data.user.id).single();
+    if (!data.user) {
+      return { success: false, error: 'Kullanıcı bilgisi alınamadı.' };
+    }
+
+    // Profil bilgisini al (RLS politikası ile korumalı)
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', data.user.id)
+      .single();
+
+    // Profil yoksa veya okuma hatası varsa, varsayılan değerlerle devam et
+    if (profileError && !profileError.message.includes('No rows')) {
+      console.warn('Profil okuma hatası:', profileError);
+      // Profil okunamazsa bile giriş yapılabilir, varsayılan değerler kullanılır
+    }
 
     const user: User = {
       id: data.user.id,
       email: data.user.email!,
-      name: profile?.name || 'User',
-      field: profile?.field || 'General',
+      name: profile?.name || data.user.user_metadata?.name || 'User',
+      field: profile?.field || data.user.user_metadata?.field || 'General',
       role: 'user',
       friends: [],
       pendingRequests: [],
