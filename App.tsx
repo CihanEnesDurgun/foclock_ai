@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { TimerStatus, PomodoroSession, PlannedTask, TimerMode, ChatMessage, User } from './types';
-import { suggestPlan, finalizeTasks, getMotivation, summarizeSession } from './services/geminiService';
+import { suggestPlan, finalizeTasks, getMotivation, summarizeSession, formatMessage } from './services/geminiService';
 import { authService } from './services/authService';
 import { locales } from './locales';
 
@@ -39,6 +39,7 @@ const App: React.FC = () => {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [userInput, setUserInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [queueOpen, setQueueOpen] = useState(true);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -405,12 +406,34 @@ const App: React.FC = () => {
     <div className="app-shell" data-theme={theme}>
       <aside className="sidebar-left">
         <div className="sidebar-header"><span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-bright)]">FUFU ARCHITECT</span></div>
-        <div className="chat-section">
+        <div className={`chat-section min-h-0 transition-all duration-300 ${queueOpen ? 'flex-[1.5]' : 'flex-1'}`}>
           <div className="chat-history custom-scrollbar pr-2">
             {chatMessages.length === 0 && <div className="text-[10px] text-[var(--text-dim)] italic text-center mt-24 uppercase tracking-[0.2em] leading-loose px-6">"Zihin dinginleştiğinde, vizyon berraklaşır.<br/>Bugünkü hedefin nedir?"</div>}
             {chatMessages.map(m => (
-              <div key={m.id} className={`p-4 rounded-3xl text-[11px] leading-relaxed border animate-fade shadow-sm ${m.role === 'assistant' ? 'bg-white/5 border-[var(--border)]' : 'bg-[var(--accent)] text-[var(--accent-text)] ml-auto border-transparent shadow-lg'}`}>
-                {m.content}
+              <div 
+                key={m.id} 
+                style={m.role === 'assistant' ? {
+                  backgroundColor: theme === 'dark' ? 'rgba(31, 41, 55, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+                  borderColor: theme === 'dark' ? 'rgba(55, 65, 81, 1)' : 'rgba(229, 231, 235, 1)',
+                  color: theme === 'dark' ? 'rgba(243, 244, 246, 1)' : 'rgba(17, 24, 39, 1)',
+                } : {}}
+                className={`p-5 rounded-3xl text-[12px] leading-relaxed border animate-fade shadow-sm ${
+                  m.role === 'assistant' 
+                    ? 'max-w-[85%]' 
+                    : 'bg-[var(--accent)] text-[var(--accent-text)] ml-auto border-transparent shadow-lg max-w-[75%]'
+                }`}
+              >
+                {m.role === 'assistant' ? (
+                  <div 
+                    className="space-y-2 [&>p]:mb-3 [&>p:last-child]:mb-0 [&>strong]:font-bold"
+                    style={{
+                      color: theme === 'dark' ? 'rgba(243, 244, 246, 1)' : 'rgba(17, 24, 39, 1)',
+                    }}
+                    dangerouslySetInnerHTML={{ __html: formatMessage(m.content) }}
+                  />
+                ) : (
+                  <div>{m.content}</div>
+                )}
               </div>
             ))}
             <div ref={chatEndRef} />
@@ -420,21 +443,41 @@ const App: React.FC = () => {
             {isProcessing && <div className="absolute right-5 top-5 w-4 h-4 border-2 border-[var(--text-bright)] border-t-transparent rounded-full animate-spin"></div>}
           </div>
         </div>
-        <div className="queue-section custom-scrollbar">
-          <h3 className="text-[10px] font-black text-[var(--text-dim)] mb-6 uppercase tracking-[0.3em]">{t.queue}</h3>
-          {plannedTasks.map(tk => (
-            <div key={tk.id} className={`p-5 border rounded-3xl cursor-pointer mb-3 transition-all group ${currentTask === tk.title ? 'border-[var(--text-bright)] bg-white/10' : 'border-[var(--border)] hover:bg-white/5 hover:border-[var(--border-active)]'}`} onClick={() => startTask(tk)}>
-              <div className="flex justify-between font-black text-[10px] uppercase tracking-wider">
-                <span className={tk.completedBlocks >= tk.durations.length ? 'line-through opacity-40' : ''}>{tk.title}</span>
-                <span className="text-[var(--text-dim)]">{tk.totalMinutes}{t.unitMins}</span>
-              </div>
-              <div className="mt-4 flex gap-1.5">
-                  {tk.durations.map((_, i) => (
-                    <div key={i} className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${i < tk.completedBlocks ? 'bg-[var(--status-flow)] shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 'bg-[var(--border)]'}`}></div>
-                  ))}
-              </div>
+        <div className={`queue-section-wrapper flex flex-col border-t border-[var(--border)] bg-[var(--bg-chat)] overflow-hidden transition-all duration-300 ${queueOpen ? 'flex-1 min-h-0' : 'flex-none'}`}>
+          <button
+            type="button"
+            onClick={() => setQueueOpen(!queueOpen)}
+            className={`flex items-center justify-between w-full px-5 py-4 text-left hover:bg-white/5 transition-colors ${queueOpen ? 'border-b border-[var(--border)]' : ''}`}
+            aria-expanded={queueOpen}
+          >
+            <h3 className="text-[10px] font-black text-[var(--text-dim)] uppercase tracking-[0.3em]">{t.queue}</h3>
+            <span className="text-[var(--text-dim)] flex items-center gap-1">
+              {plannedTasks.length > 0 && <span className="text-[9px] font-bold bg-[var(--accent)] text-[var(--accent-text)] px-2 py-0.5 rounded-full">{plannedTasks.length}</span>}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={`transition-transform duration-300 ${queueOpen ? 'rotate-180' : ''}`}>
+                <path d="M6 9l6 6 6-6"/>
+              </svg>
+            </span>
+          </button>
+          <div className={`custom-scrollbar overflow-y-auto transition-all duration-300 ${queueOpen ? 'flex-1 min-h-0 opacity-100' : 'max-h-0 opacity-0 overflow-hidden flex-none'}`}>
+            <div className="p-5 pt-2 min-h-0">
+              {plannedTasks.map(tk => (
+                <div key={tk.id} className={`p-5 border rounded-3xl cursor-pointer mb-3 transition-all group ${currentTask === tk.title ? 'border-[var(--text-bright)] bg-white/10' : 'border-[var(--border)] hover:bg-white/5 hover:border-[var(--border-active)]'}`} onClick={() => startTask(tk)}>
+                  <div className="flex justify-between font-black text-[10px] uppercase tracking-wider">
+                    <span className={tk.completedBlocks >= tk.durations.length ? 'line-through opacity-40' : ''}>{tk.title}</span>
+                    <span className="text-[var(--text-dim)]">{tk.totalMinutes}{t.unitMins}</span>
+                  </div>
+                  <div className="mt-4 flex gap-1.5">
+                    {tk.durations.map((_, i) => (
+                      <div key={i} className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${i < tk.completedBlocks ? 'bg-[var(--status-flow)] shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 'bg-[var(--border)]'}`}></div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              {plannedTasks.length === 0 && queueOpen && (
+                <p className="text-[10px] text-[var(--text-dim)] italic text-center py-8 uppercase tracking-widest">{t.queueEmpty}</p>
+              )}
             </div>
-          ))}
+          </div>
         </div>
       </aside>
 
