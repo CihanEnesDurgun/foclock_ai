@@ -21,7 +21,14 @@ export const authService = {
       }
     });
 
-    if (authError) return { success: false, error: authError.message };
+    if (authError) {
+      console.error('SignUp error:', authError);
+      // 500 hatası için özel mesaj
+      if (authError.status === 500 || authError.message.includes('Internal Server Error')) {
+        return { success: false, error: 'Sunucu hatası. Lütfen tekrar deneyin veya daha sonra tekrar deneyin.' };
+      }
+      return { success: false, error: authError.message };
+    }
 
     // Eğer database trigger kullanıyorsanız, aşağıdaki manuel insert'e gerek yok
     // Trigger otomatik olarak profil oluşturacak
