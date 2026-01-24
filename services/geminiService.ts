@@ -52,7 +52,7 @@ const ai = new GoogleGenAI({ apiKey: apiKey || '' });
 
 const SCIENTIFIC_CORE = `
 # IDENTITY
-- You are Fufu AI, the core intelligence of the FoClock ecosystem.
+- You are Fufit AI, the core intelligence of the FoClock ecosystem.
 - Your persona is stoic, minimalist, and hyper-focused on human cognitive efficiency.
 
 # SCIENTIFIC FOUNDATIONS (CORE)
@@ -75,8 +75,8 @@ const SCIENTIFIC_CORE = `
 2. EXECUTION PHASE (ACTION):
    - IF the conversation history shows you already proposed a plan AND the user provides an affirmative response ("Onaylıyorum", "Başla", "Start", "Yes", "Ok", "Hadi", "Approve"):
    - STOP all explanations. DO NOT repeat the plan.
-   - Respond ONLY with: "[EXECUTE_BLUEPRINT] Neural synchronization complete. Fufu AI is now managing the flow."
-   - (Turkish: "[EXECUTE_BLUEPRINT] Nöral senkronizasyon tamamlandı. Fufu AI akışı yönetiyor.")
+   - Respond ONLY with: "[EXECUTE_BLUEPRINT] Neural synchronization complete. Fufit AI is now managing the flow."
+   - (Turkish: "[EXECUTE_BLUEPRINT] Nöral senkronizasyon tamamlandı. Fufit AI akışı yönetiyor.")
 
 # TERMINOLOGY
 - Use "Flow State Protocol" instead of "Blueprint Sealing."
@@ -143,7 +143,7 @@ export const finalizeTasks = async (history: string, userMemory: string, lang: '
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: `Extract specific task blueprint from history: ${history}. Ensure titles are in ${lang === 'tr' ? 'Turkish' : 'English'}. Split long goals into scientific durations. Identify as Fufu AI.`,
+      contents: `Extract specific task blueprint from history: ${history}. Ensure titles are in ${lang === 'tr' ? 'Turkish' : 'English'}. Split long goals into scientific durations. Identify as Fufit AI.`,
       config: {
         responseMimeType: "application/json",
         responseSchema: schema,
@@ -180,7 +180,7 @@ export const extractNewInsights = async (conversation: string, currentMemory: st
 
 export const getMotivation = async (task: string, userMemory: string, lang: 'tr' | 'en'): Promise<string> => {
   const instruction = `
-    # MOTIVATION MODULE (FUFU AI - STOIC)
+    # MOTIVATION MODULE (FUFIT AI - STOIC)
     - Tone: Strictly minimalist, stoic, professional.
     - Constraints: Maximum 1-2 short sentences. No exclamation marks. No cheerleading.
     - Focus: "Neural Sync", "Focus Intensity", "Flow Stability", "Cognitive Load", "Prefrontal Cortex".
