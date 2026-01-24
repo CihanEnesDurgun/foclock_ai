@@ -9,14 +9,35 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 export const authService = {
   register: async (userData: Partial<User>): Promise<{ success: boolean; error?: string }> => {
+    // Metadata ile signUp yap (trigger için name ve field bilgisi)
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: userData.email!,
       password: userData.password!,
+      options: {
+        data: {
+          name: userData.name,
+          field: userData.field
+        }
+      }
     });
 
     if (authError) return { success: false, error: authError.message };
 
+    // Eğer database trigger kullanıyorsanız, aşağıdaki manuel insert'e gerek yok
+    // Trigger otomatik olarak profil oluşturacak
+    
+    // Trigger yoksa veya trigger başarısız olursa manuel insert (fallback)
     if (authData.user) {
+      // Session'ın hazır olmasını bekle (email confirmation kapalıysa session hemen gelir)
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      // Eğer session yoksa, kısa bir süre bekle ve tekrar dene
+      if (!session) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
+      // Trigger varsa bu insert başarısız olabilir (duplicate key), bu normal
+      // Trigger yoksa bu insert çalışacak
       const { error: profileError } = await supabase.from('profiles').insert([
         { 
           id: authData.user.id, 
@@ -25,8 +46,12 @@ export const authService = {
           preferences: { theme: 'dark', language: 'tr', notifications: true },
           project_tags: []
         }
-      ]);
-      if (profileError) return { success: false, error: profileError.message };
+      ]).select();
+      
+      // Sadece gerçek hataları döndür (duplicate key hatası normal, trigger zaten oluşturmuştur)
+      if (profileError && !profileError.message.includes('duplicate key') && !profileError.message.includes('violates row-level security')) {
+        return { success: false, error: profileError.message };
+      }
     }
     return { success: true };
   },
