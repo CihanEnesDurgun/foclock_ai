@@ -4,6 +4,7 @@ import { TimerStatus, PomodoroSession, PlannedTask, TimerMode, ChatMessage, User
 import { suggestPlan, finalizeTasks, getMotivation, summarizeSession, formatMessage } from './services/geminiService';
 import { authService } from './services/authService';
 import { locales } from './locales';
+import { getQuote, quoteCount, ROTATION_INTERVAL_MS } from './quotes';
 
 const DEMO_USER_ID = 'demo-user-id';
 const demoUser: User = {
@@ -40,6 +41,7 @@ const App: React.FC = () => {
   const [userInput, setUserInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [queueOpen, setQueueOpen] = useState(true);
+  const [quoteIndex, setQuoteIndex] = useState(0);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -86,6 +88,15 @@ const App: React.FC = () => {
       authService.updatePreferences(user.id, { theme, language: lang, notifications: true });
     }
   }, [theme, lang]);
+
+  // Dönen alıntı: sayaç altındaki alanda; sadece ana ekranda ilerler
+  useEffect(() => {
+    if (view !== 'home') return;
+    const id = setInterval(() => {
+      setQuoteIndex((i) => (i + 1) % quoteCount(lang));
+    }, ROTATION_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [view, lang]);
 
   useEffect(() => {
     if (status === TimerStatus.RUNNING && timeLeft > 0) {
@@ -220,7 +231,7 @@ const App: React.FC = () => {
     return (
       <div className="h-screen w-screen bg-black flex flex-col items-center justify-center">
         <div className="w-20 h-20 border-t-2 border-white rounded-full animate-spin"></div>
-        <h1 className="mt-8 text-white font-black tracking-widest uppercase text-[10px] animate-pulse">Neural Link v1.0 Beta</h1>
+        <h1 className="mt-8 text-white font-black tracking-widest uppercase text-[10px] animate-pulse">Neural Link v1.1 Beta</h1>
       </div>
     );
   }
@@ -230,10 +241,10 @@ const App: React.FC = () => {
       tr: {
         title: 'FoClock AI',
         subtitle: 'Nöral Odak Motoru',
-        beta: 'Beta v1.0',
+        beta: 'Beta v1.1',
         betaMessage: '🎯 Özel erişim: Bu beta sürümünü test eden seçili kullanıcılardan birisiniz. Sizin deneyiminiz ve geri bildirimleriniz FoClock AI\'nın geleceğini şekillendiriyor.',
         feature1Title: 'AI Destekli Planlama',
-        feature1Desc: 'Fufu AI ile görevlerinizi bilimsel temellere dayalı olarak planlayın ve optimize edin.',
+        feature1Desc: 'Fufit AI ile görevlerinizi bilimsel temellere dayalı olarak planlayın ve optimize edin.',
         feature2Title: 'Ultradian Ritimler',
         feature2Desc: '90 dakikalık derin odak blokları ve 20 dakikalık zorunlu resetler ile doğal ritminize uyum sağlayın.',
         feature3Title: 'Flow State Protokolü',
@@ -245,10 +256,10 @@ const App: React.FC = () => {
       en: {
         title: 'FoClock AI',
         subtitle: 'Neural Focus Engine',
-        beta: 'Beta v1.0',
+        beta: 'Beta v1.1',
         betaMessage: '🎯 Exclusive Access: You\'re among the select few testing this beta version. Your experience and feedback are shaping the future of FoClock AI.',
         feature1Title: 'AI-Powered Planning',
-        feature1Desc: 'Plan and optimize your tasks based on scientific principles with Fufu AI.',
+        feature1Desc: 'Plan and optimize your tasks based on scientific principles with Fufit AI.',
         feature2Title: 'Ultradian Rhythms',
         feature2Desc: 'Align with your natural rhythm with 90-minute deep focus blocks and 20-minute mandatory resets.',
         feature3Title: 'Flow State Protocol',
@@ -405,10 +416,10 @@ const App: React.FC = () => {
   return (
     <div className="app-shell" data-theme={theme}>
       <aside className="sidebar-left">
-        <div className="sidebar-header"><span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-bright)]">FUFU ARCHITECT</span></div>
+        <div className="sidebar-header"><span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-bright)]">{t.architectTitle}</span></div>
         <div className={`chat-section min-h-0 transition-all duration-300 ${queueOpen ? 'flex-[1.5]' : 'flex-1'}`}>
           <div className="chat-history custom-scrollbar pr-2">
-            {chatMessages.length === 0 && <div className="text-[10px] text-[var(--text-dim)] italic text-center mt-24 uppercase tracking-[0.2em] leading-loose px-6">"Zihin dinginleştiğinde, vizyon berraklaşır.<br/>Bugünkü hedefin nedir?"</div>}
+            {chatMessages.length === 0 && <div className="text-[10px] text-[var(--text-dim)] italic text-center mt-24 tracking-[0.2em] leading-loose px-6" dangerouslySetInnerHTML={{ __html: `"${t.welcomeQuote}"` }} />}
             {chatMessages.map(m => (
               <div 
                 key={m.id} 
@@ -439,7 +450,7 @@ const App: React.FC = () => {
             <div ref={chatEndRef} />
           </div>
           <div className="relative mt-4">
-            <input value={userInput} onChange={e => setUserInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleChat()} disabled={isProcessing} className="w-full bg-white/5 border border-[var(--border)] rounded-2xl p-5 text-xs outline-none focus:border-[var(--text-bright)] transition-all shadow-inner" placeholder={isProcessing ? "Nöral analiz yapılıyor..." : t.architectHint} />
+            <input value={userInput} onChange={e => setUserInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleChat()} disabled={isProcessing} className="w-full bg-white/5 border border-[var(--border)] rounded-2xl p-5 text-xs outline-none focus:border-[var(--text-bright)] transition-all shadow-inner" placeholder={isProcessing ? t.analyzing : t.architectHint} />
             {isProcessing && <div className="absolute right-5 top-5 w-4 h-4 border-2 border-[var(--text-bright)] border-t-transparent rounded-full animate-spin"></div>}
           </div>
         </div>
@@ -482,23 +493,23 @@ const App: React.FC = () => {
       </aside>
 
       <main className="main-focus">
-        <div className="watermark">FUFU NEURAL ENGINE v1.0.b</div>
-        <div className="flex flex-col items-center">
-            <div className="text-[11px] font-black uppercase tracking-[0.5em] text-[var(--text-bright)] mb-10 h-4 drop-shadow-sm">{currentTask || "SİSTEM HAZIR"}</div>
+        <div className="watermark">FUFIT NEURAL ENGINE v1.1.b</div>
+        <div className="absolute left-1/2 top-[68px] z-10 -translate-x-1/2 text-[11px] font-black uppercase tracking-[0.5em] text-[var(--text-bright)] drop-shadow-sm">{currentTask || "SİSTEM HAZIR"}</div>
+        <div className="flex flex-1 flex-col items-center justify-center">
             <div className="timer-container">
                 <svg className="ring-svg" viewBox="0 0 320 320">
                   <circle cx="160" cy="160" r="145" fill="transparent" stroke="var(--ring-track)" strokeWidth="1" />
                   <circle cx="160" cy="160" r="145" fill="transparent" stroke="var(--text-bright)" strokeWidth="4" strokeDasharray="911" strokeDashoffset={911 - (911 * timeLeft) / sessionDuration} strokeLinecap="round" className="ring-circle" />
                 </svg>
-                <div className="timer-text">
-                    <span className="text-9xl font-black tracking-tighter text-[var(--text-bright)] tabular-nums drop-shadow-2xl">{Math.floor(timeLeft / 60).toString().padStart(2, '0')}:{(timeLeft % 60).toString().padStart(2, '0')}</span>
-                    <div className="flex items-center gap-3 mt-8 bg-white/5 px-4 py-2 rounded-full border border-[var(--border)] shadow-sm">
+                <div className="absolute inset-0 z-10">
+                    <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-9xl font-black tracking-tighter text-[var(--text-bright)] tabular-nums drop-shadow-2xl">{Math.floor(timeLeft / 60).toString().padStart(2, '0')}:{(timeLeft % 60).toString().padStart(2, '0')}</span>
+                    <div className="absolute top-[82%] left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-3 bg-white/5 px-4 py-2 rounded-full border border-[var(--border)] shadow-sm">
                       <div className={`w-2.5 h-2.5 rounded-full ${status === TimerStatus.RUNNING ? 'bg-[var(--status-flow)] animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.6)]' : 'bg-[var(--status-idle)]'}`}></div>
                       <span className="text-[10px] font-black text-[var(--text-dim)] uppercase tracking-[0.4em]">{t.status[status]}</span>
                     </div>
                 </div>
             </div>
-            <div className="mt-14 text-[11px] font-medium text-[var(--text-dim)] max-w-sm text-center uppercase tracking-widest leading-relaxed h-10 px-10 italic">"{motivation}"</div>
+            <div key={quoteIndex} className="mt-14 text-[11px] font-medium text-[var(--text-dim)] max-w-sm text-center tracking-widest leading-relaxed min-h-10 px-10 italic animate-fade">{getQuote(lang, quoteIndex)}</div>
         </div>
         <div className="flex gap-12">
             <button onClick={() => setStatus(status === TimerStatus.RUNNING ? TimerStatus.PAUSED : TimerStatus.RUNNING)} className="w-24 h-24 rounded-full bg-[var(--accent)] text-[var(--accent-text)] flex items-center justify-center transition-all hover:scale-110 active:scale-90 shadow-2xl disabled:opacity-20" disabled={!currentTask}>
@@ -552,7 +563,7 @@ const App: React.FC = () => {
                     <button onClick={() => setLang(lang === 'tr' ? 'en' : 'tr')} className="px-5 py-2 border border-[var(--border)] rounded-xl bg-white/5 text-[10px] font-black uppercase hover:border-[var(--text-bright)] transition-all">{lang}</button>
                   </div>
                   <div className="pt-6 border-t border-[var(--border)]">
-                     <span className="text-[8px] font-bold text-[var(--text-dim)] uppercase tracking-widest">Sürüm: FoClock AI Neural Beta 1.0</span>
+                     <span className="text-[8px] font-bold text-[var(--text-dim)] uppercase tracking-widest">Sürüm: FoClock AI Neural Beta 1.1</span>
                   </div>
                 </div>
                 <button className="w-full mt-10 py-4 bg-[var(--accent)] text-[var(--accent-text)] rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg" onClick={() => setSidebarModule('default')}>Tercihleri Uygula</button>
@@ -578,10 +589,9 @@ const App: React.FC = () => {
             )}
          </div>
          <div className="absolute bottom-10 left-0 w-full px-8 opacity-20 hover:opacity-100 transition-all pointer-events-none">
-            <div className="text-[8px] font-black uppercase tracking-widest text-center border-t border-[var(--border)] pt-4">Neural Architecture by Fufu AI</div>
+            <div className="text-[8px] font-black uppercase tracking-widest text-center border-t border-[var(--border)] pt-4">Neural Architecture by Fufit AI</div>
          </div>
       </aside>
-      <div className="footer-bar"><span>BETA ACCESS: AUTHORIZED // NETWORK: STABLE // ENCRYPTION: 256-BIT AES</span></div>
     </div>
   );
 };

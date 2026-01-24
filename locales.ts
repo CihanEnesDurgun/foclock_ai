@@ -1,8 +1,11 @@
 
 export const locales = {
   tr: {
-    architect: "FUFU AI",
-    architectHint: "Fufu AI hedefini bekliyor...",
+    architect: "FUFIT AI",
+    architectTitle: "FUFİT AI",
+    architectHint: "Fufit AI hedefini bekliyor...",
+    welcomeQuote: "ZİHİN DİNGİNLEŞTİĞİNDE, VİZYON BERRAKLAŞIR.<br/>BUGÜNKÜ HEDEFİN NEDİR?",
+    analyzing: "Nöral analiz yapılıyor...",
     queue: "KUYRUK",
     queueEmpty: "Kuyruk boş",
     history: "ANALİZ",
@@ -52,8 +55,11 @@ export const locales = {
     status: { IDLE: "HAZIR", RUNNING: "AKIŞTA", PAUSED: "DURAKLADI", COMPLETED: "TAMAMLANDI" }
   },
   en: {
-    architect: "FUFU AI",
-    architectHint: "Fufu AI is standby for objective...",
+    architect: "FUFIT AI",
+    architectTitle: "FUFIT AI",
+    architectHint: "Fufit AI is standby for objective...",
+    welcomeQuote: "WHEN THE MIND CALMS, VISION BECOMES CLEAR.<br/>WHAT IS YOUR GOAL TODAY?",
+    analyzing: "Neural analysis in progress...",
     queue: "QUEUE",
     queueEmpty: "Queue empty",
     history: "ANALYTICS",
