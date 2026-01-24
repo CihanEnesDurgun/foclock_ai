@@ -1,6 +1,46 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 
+// Utility function to format AI responses: convert markdown to HTML while preserving structure
+export const formatMessage = (text: string): string => {
+  if (!text) return text;
+  
+  let formatted = text
+    // Remove markdown headers (###, ##, #) - we don't want these
+    .replace(/^#{1,6}\s+/gm, '')
+    // Remove horizontal rules (---, ***, ___)
+    .replace(/^[-*_]{3,}$/gm, '')
+    // Remove blockquotes (>)
+    .replace(/^>\s+/gm, '')
+    // Remove list markers (*, -, +, 1.) - convert to plain text
+    .replace(/^[\*\-\+]\s+/gm, '')
+    .replace(/^\d+\.\s+/gm, '')
+    // Convert bold (**text** or __text__) to HTML <strong>
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/__([^_]+)__/g, '<strong>$1</strong>')
+    // Remove italic (*text* or _text_) - we only want bold, not italic
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/_([^_]+)_/g, '$1')
+    // Convert double line breaks to paragraph breaks
+    .replace(/\n\n+/g, '</p><p>')
+    // Clean up multiple consecutive line breaks
+    .replace(/\n{3,}/g, '\n\n')
+    // Trim whitespace
+    .trim();
+  
+  // Wrap in paragraph tags if content exists
+  if (formatted) {
+    formatted = '<p>' + formatted + '</p>';
+    // Clean up empty paragraphs
+    formatted = formatted.replace(/<p>\s*<\/p>/g, '');
+  }
+  
+  return formatted;
+};
+
+// Legacy function for backward compatibility
+export const cleanMarkdown = formatMessage;
+
 // Vite'da environment variables için import.meta.env kullanılır
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.GEMINI_API_KEY || (typeof process !== 'undefined' ? process.env.API_KEY : undefined);
 
@@ -22,7 +62,13 @@ const SCIENTIFIC_CORE = `
 
 # CRITICAL LOGIC: PHASE TRANSITION
 1. PLANNING PHASE (PROPOSAL):
-   - Analyze intent. Propose strategy with Headings (###), Bullet points, and Blockquotes (>).
+   - Analyze intent. Propose strategy in natural, conversational language.
+   - Write as if speaking directly to the user in a professional but human dialogue.
+   - ALWAYS break your response into clear paragraphs. Use double line breaks (blank line) between paragraphs.
+   - Use **text** to make important phrases, key concepts, durations, and critical information bold.
+   - Structure your response with clear paragraph breaks for readability.
+   - NEVER use markdown headings (###), list markers (*, -), horizontal rules (---), or blockquotes (>).
+   - Write naturally, as if having a real conversation, but with proper paragraph structure.
    - ALWAYS ask for permission to pivot if science dictates it.
    - DO NOT output [EXECUTE_BLUEPRINT] here.
 
@@ -44,10 +90,14 @@ ${SCIENTIFIC_CORE}
 # USER CONTEXT
 ${userMemory || "Baseline state. No historical data."}
 
-# FORMATTING RULES
-- Use ### for Section Headings.
-- Use > for Scientific Justifications.
-- Use --- for thematic breaks.
+# RESPONSE STYLE RULES
+- Write in natural, conversational language with proper paragraph structure.
+- ALWAYS separate paragraphs with blank lines (double line breaks).
+- Use **text** to emphasize important information: key concepts, durations, critical steps, and important phrases.
+- Structure your response with clear paragraph breaks for maximum readability.
+- NEVER use markdown headings (###), list markers (*, -), horizontal rules (---), or blockquotes (>).
+- Maintain a professional but human tone, as if speaking directly to the user.
+- Break complex information into digestible paragraphs, each focusing on one main idea.
 - Use specific task names provided by the user (e.g., "TÜBİTAK Analysis") in descriptions.
 `;
 };
@@ -65,7 +115,8 @@ export const suggestPlan = async (userInput: string, chatHistory: string, userMe
         systemInstruction: assembleInstruction(userMemory),
       },
     });
-    return response.text?.trim() || "System standby.";
+    const rawResponse = response.text?.trim() || "System standby.";
+    return cleanMarkdown(rawResponse);
   } catch (error) {
     console.error("Architect link failed:", error);
     return "Neural link interrupted.";
@@ -142,7 +193,8 @@ export const getMotivation = async (task: string, userMemory: string, lang: 'tr'
       contents: `Generate focus signal for: "${task}"`,
       config: { systemInstruction: instruction }
     });
-    return response.text?.trim() || (lang === 'tr' ? "Nöral senkronizasyon optimal." : "Neural synchronization optimal.");
+    const rawResponse = response.text?.trim() || (lang === 'tr' ? "Nöral senkronizasyon optimal." : "Neural synchronization optimal.");
+    return cleanMarkdown(rawResponse);
   } catch {
     return lang === 'tr' ? "Nöral bütünlük korundu." : "Neural integrity secured.";
   }
@@ -155,7 +207,8 @@ export const summarizeSession = async (task: string, userMemory: string, lang: '
       contents: `Log result for: "${task}"`,
       config: { systemInstruction: assembleInstruction(userMemory) }
     });
-    return response.text?.trim() || "Log entry: Success.";
+    const rawResponse = response.text?.trim() || "Log entry: Success.";
+    return cleanMarkdown(rawResponse);
   } catch {
     return "Sync complete.";
   }
