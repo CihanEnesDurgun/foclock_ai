@@ -21,6 +21,7 @@ const DEMO_USER_ID = 'demo-user-id';
 const demoUser: User = {
   id: DEMO_USER_ID,
   name: 'Demo Kullanıcı',
+  username: 'demo',
   email: 'demo@foclock.local',
   field: 'Yazılım',
   projectTags: [],
@@ -209,8 +210,8 @@ const App: React.FC = () => {
     setAuthError('');
     setIsSyncing(true);
     const formData = new FormData(e.currentTarget);
-    const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
+    const email = (formData.get('email') as string)?.trim() ?? '';
+    const password = (formData.get('password') as string) ?? '';
 
     try {
       if (isLogin) {
@@ -223,38 +224,39 @@ const App: React.FC = () => {
           setStats(userStats);
           setView('home');
         } else {
-          const msg = res.error ?? '';
-          const isRateLimit = /rate limit|email rate limit exceeded/i.test(msg);
-          setAuthError(isRateLimit ? t.authErrorRateLimit : msg);
+          setAuthError(res.error ?? '');
         }
       } else {
         const username = (formData.get('username') as string)?.trim() ?? '';
+        const name = (formData.get('name') as string)?.trim() ?? '';
+        const field = (formData.get('field') as string)?.trim() ?? '';
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          setAuthError(lang === 'tr' ? 'Geçerli bir e-posta girin.' : 'Enter a valid email.');
+          setIsSyncing(false);
+          return;
+        }
+        if (password.length < 6) {
+          setAuthError(lang === 'tr' ? 'Şifre en az 6 karakter olmalı.' : 'Password must be at least 6 characters.');
+          setIsSyncing(false);
+          return;
+        }
         if (usernameStatus !== 'ok') {
           setAuthError(usernameStatus === 'taken' ? t.usernameTaken : t.usernameInvalid);
           setIsSyncing(false);
           return;
         }
-        const res = await authService.register({
-          email, password,
-          name: formData.get('name') as string,
-          field: formData.get('field') as string,
-          username,
-        });
+        const res = await authService.register({ email, password, name, field, username });
         if (res.success) {
           setIsLogin(true);
           setRegisterUsername('');
           setUsernameStatus('idle');
-          setAuthError(lang === 'tr' ? 'Kayıt başarılı. Şimdi giriş yap.' : 'Registration successful. Sign in now.');
+          setAuthError(t.authSuccess);
         } else {
-          const msg = res.error ?? '';
-          if (msg === 'username_taken') setAuthError(t.usernameTaken);
-          else if (/username|invalid/.test(msg)) setAuthError(t.usernameInvalid);
-          else if (/rate limit|email rate limit exceeded/i.test(msg)) setAuthError(t.authErrorRateLimit);
-          else setAuthError(msg);
+          setAuthError(res.error ?? t.authServerError);
         }
       }
-    } catch (err) {
-      setAuthError(lang === 'tr' ? 'Sistem meşgul. Tekrar dene.' : 'System busy. Try again.');
+    } catch {
+      setAuthError(t.authServerError);
     } finally { setIsSyncing(false); }
   };
 
@@ -482,51 +484,90 @@ const App: React.FC = () => {
 
   if (view === 'auth') {
     return (
-      <div className="h-screen w-screen bg-[var(--bg-app)] flex items-center justify-center p-6">
-        {isSyncing && <div className="sync-overlay"><div className="loader-dots"><div className="dot"></div><div className="dot"></div><div className="dot"></div></div></div>}
-        <div className="max-w-md w-full p-12 border border-[var(--border)] rounded-[3rem] bg-[var(--bg-sidebar)] shadow-2xl transition-all relative">
-          <button 
-            onClick={() => setView('welcome')} 
-            className="absolute top-6 left-6 p-2 rounded-xl hover:bg-white/5 transition-all text-[var(--text-dim)] hover:text-[var(--text-bright)]"
-            aria-label="Geri dön"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M19 12H5M12 19l-7-7 7-7"/>
-            </svg>
-          </button>
-          <div className="flex justify-center mb-10">
-            <div className="w-14 h-14 bg-[var(--accent)] rounded-2xl flex items-center justify-center text-[var(--accent-text)] font-black text-xl shadow-xl">F</div>
+      <div className="h-screen w-screen bg-[var(--bg-app)] overflow-y-auto overscroll-contain">
+        {isSyncing && (
+          <div className="sync-overlay">
+            <div className="loader-dots"><div className="dot"></div><div className="dot"></div><div className="dot"></div></div>
           </div>
-          <h2 className="text-3xl font-black mb-10 text-[var(--text-bright)] uppercase tracking-tighter text-center">{isLogin ? t.signIn : t.signUp}</h2>
-          <form onSubmit={handleAuth} className="space-y-6">
-            {!isLogin && (
-              <>
-                <input name="name" placeholder={t.name} className="input-auth" required />
-                <input name="field" placeholder={t.engineeringField} className="input-auth" required />
-                <div>
-                  <input
-                    name="username"
-                    placeholder={t.usernamePlaceholder}
-                    className="input-auth"
-                    required
-                    value={registerUsername}
-                    onChange={(e) => setRegisterUsername(e.target.value)}
-                    autoComplete="username"
-                  />
-                  {usernameStatus === 'checking' && <p className="text-[10px] text-[var(--text-dim)] mt-1">{t.loading}</p>}
-                  {usernameStatus === 'ok' && <p className="text-[10px] text-[var(--status-flow)] mt-1">✓</p>}
-                  {usernameStatus === 'taken' && <p className="text-[10px] text-red-500 mt-1">{t.usernameTaken}</p>}
-                  {usernameStatus === 'invalid' && <p className="text-[10px] text-red-500 mt-1">{t.usernameInvalid}</p>}
+        )}
+        <div className="w-full max-w-[400px] mx-auto pt-4 pb-24 px-4 sm:pt-6 sm:px-5 sm:pb-28">
+          <div className="border border-[var(--border)] rounded-2xl bg-[var(--bg-sidebar)] shadow-xl p-5 sm:p-6 relative">
+            <button
+              type="button"
+              onClick={() => setView('welcome')}
+              className="absolute top-4 left-4 p-1.5 rounded-lg hover:bg-white/5 text-[var(--text-dim)] hover:text-[var(--text-bright)] transition-colors"
+              aria-label={t.back}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            </button>
+            <div className="flex justify-center mb-4">
+              <div className="w-10 h-10 bg-[var(--accent)] rounded-xl flex items-center justify-center text-[var(--accent-text)] font-black text-base shadow-md">F</div>
+            </div>
+            <h1 className="text-xl font-black text-[var(--text-bright)] uppercase tracking-tight text-center mb-5">
+              {isLogin ? t.signIn : t.signUp}
+            </h1>
+
+            <form onSubmit={handleAuth} className="space-y-3.5">
+              {!isLogin && (
+                <>
+                  <div>
+                    <label htmlFor="auth-name" className="block text-[10px] font-bold uppercase tracking-wider text-[var(--text-dim)] mb-1">{t.name}</label>
+                    <input id="auth-name" name="name" type="text" required className="input-auth w-full py-2.5" placeholder={t.name} autoComplete="name" />
+                  </div>
+                  <div>
+                    <label htmlFor="auth-field" className="block text-[10px] font-bold uppercase tracking-wider text-[var(--text-dim)] mb-1">{t.engineeringField}</label>
+                    <input id="auth-field" name="field" type="text" required className="input-auth w-full py-2.5" placeholder={t.engineeringField} autoComplete="organization-title" />
+                  </div>
+                  <div>
+                    <label htmlFor="auth-username" className="block text-[10px] font-bold uppercase tracking-wider text-[var(--text-dim)] mb-1">{t.username}</label>
+                    <input
+                      id="auth-username"
+                      name="username"
+                      type="text"
+                      required
+                      value={registerUsername}
+                      onChange={(e) => setRegisterUsername(e.target.value)}
+                      className="input-auth w-full py-2.5"
+                      placeholder={t.usernamePlaceholder}
+                      autoComplete="username"
+                    />
+                    {usernameStatus === 'checking' && <p className="mt-1 text-[10px] text-[var(--text-dim)]">{t.loading}</p>}
+                    {usernameStatus === 'ok' && <p className="mt-1 text-[10px] text-[var(--status-flow)] font-medium">✓ {t.usernameAvailable}</p>}
+                    {usernameStatus === 'taken' && <p className="mt-1 text-[10px] text-red-500">{t.usernameTaken}</p>}
+                    {usernameStatus === 'invalid' && <p className="mt-1 text-[10px] text-red-500">{t.usernameInvalid}</p>}
+                  </div>
+                </>
+              )}
+
+              <div>
+                {!isLogin && <label htmlFor="auth-email" className="block text-[10px] font-bold uppercase tracking-wider text-[var(--text-dim)] mb-1">{t.email}</label>}
+                <input id="auth-email" name="email" type="email" required className="input-auth w-full py-2.5" placeholder={t.email} autoComplete="email" />
+              </div>
+              <div>
+                {!isLogin && <label htmlFor="auth-password" className="block text-[10px] font-bold uppercase tracking-wider text-[var(--text-dim)] mb-1">{t.password}</label>}
+                <input id="auth-password" name="password" type="password" required minLength={6} className="input-auth w-full py-2.5" placeholder={t.password} autoComplete={isLogin ? 'current-password' : 'new-password'} />
+                {!isLogin && <p className="mt-1 text-[10px] text-[var(--text-dim)]">{t.passwordHint}</p>}
+              </div>
+
+              {authError && (
+                <div className={`rounded-lg py-2.5 px-3 text-center text-[10px] font-semibold ${authError === t.authSuccess ? 'bg-[var(--status-flow)]/15 text-[var(--status-flow)]' : 'bg-red-500/10 text-red-500'}`}>
+                  {authError}
                 </div>
-              </>
-            )}
-            <input name="email" type="email" placeholder={t.email} className="input-auth" required />
-            <input name="password" type="password" placeholder={t.password} className="input-auth" required />
-            {authError && <p className="text-red-500 text-[10px] font-black uppercase text-center bg-red-500/10 py-2 rounded-lg">{authError}</p>}
-            <button type="submit" className="w-full py-5 bg-[var(--accent)] text-[var(--accent-text)] font-black rounded-2xl uppercase text-[11px] tracking-widest transition-all hover:brightness-110 active:scale-[0.98] shadow-lg">{isLogin ? t.signIn : t.signUp}</button>
-            <button type="button" onClick={() => { setIsLogin(!isLogin); setAuthError(''); setRegisterUsername(''); setUsernameStatus('idle'); }} className="w-full text-xs text-[var(--text-dim)] font-medium hover:text-[var(--text-bright)] py-2">{isLogin ? t.signUp : t.signIn}</button>
-            <button type="button" onClick={handleDemo} className="w-full text-xs text-[var(--text-dim)] font-medium hover:text-[var(--text-bright)] py-2 border border-[var(--border)] rounded-xl mt-2 hover:bg-white/5 transition-all">{t.demoTry}</button>
-          </form>
+              )}
+
+              <button type="submit" disabled={isSyncing} className="w-full py-3.5 bg-[var(--accent)] text-[var(--accent-text)] font-black rounded-xl uppercase text-[10px] tracking-widest hover:brightness-110 active:scale-[0.99] disabled:opacity-70 transition-all shadow-md mt-1">
+                {isLogin ? t.signIn : t.signUp}
+              </button>
+              <div className="flex flex-col gap-1 pt-0.5">
+                <button type="button" onClick={() => { setIsLogin(!isLogin); setAuthError(''); setRegisterUsername(''); setUsernameStatus('idle'); }} className="text-[11px] text-[var(--text-dim)] hover:text-[var(--text-bright)] font-medium py-1">
+                  {isLogin ? t.signUp : t.signIn}
+                </button>
+                <button type="button" onClick={handleDemo} className="text-[11px] text-[var(--text-dim)] hover:text-[var(--text-bright)] font-medium py-1 border border-[var(--border)] rounded-lg hover:bg-white/5 transition-colors">
+                  {t.demoTry}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
     );
@@ -644,13 +685,16 @@ const App: React.FC = () => {
       </main>
 
       <aside className="right-zone-v2">
-         <div className="sidebar-header flex justify-between items-center bg-white/5 backdrop-blur-md">
-           <div className="flex items-center gap-3">
-             <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-gray-200 to-white flex items-center justify-center text-[10px] font-black text-black shadow-sm">{user?.name[0]}</div>
-             <h3 className="text-[11px] font-black uppercase tracking-widest text-[var(--text-bright)]">{user?.name}</h3>
-           </div>
-           <button onClick={() => authService.logout().then(() => { setUser(null); setView('auth'); })} className="p-2 rounded-lg hover:bg-red-500/10 text-red-500 transition-all"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg></button>
-         </div>
+<div className="sidebar-header flex justify-between items-center bg-white/5 backdrop-blur-md">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-gray-200 to-white flex items-center justify-center text-[10px] font-black text-black shadow-sm shrink-0">{(user?.username || user?.name)?.[0]}</div>
+            <div className="min-w-0">
+              <div className="text-[11px] font-black tracking-widest text-[var(--text-bright)] truncate">@{user?.username || 'user'}</div>
+              <div className="text-[9px] text-[var(--text-dim)] truncate">{user?.field}</div>
+            </div>
+          </div>
+          <button onClick={() => authService.logout().then(() => { setUser(null); setView('auth'); })} className="p-2 rounded-lg hover:bg-red-500/10 text-red-500 transition-all shrink-0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg></button>
+        </div>
          <div className="sidebar-content px-6 py-8">
             {sidebarModule === 'analytics' ? (
                <div className="animate-fade">
@@ -726,7 +770,7 @@ const App: React.FC = () => {
               </div>
             ) : sidebarModule === 'account' ? (
               <div className="animate-fade">
-                <h4 className="text-[11px] font-black text-[var(--text-dim)] uppercase tracking-widest mb-6">{t.account}</h4>
+                <h4 className="text-[11px] font-black text-[var(--text-dim)] uppercase tracking-widest mb-6">{t.socialMenu}</h4>
                 {user?.id === DEMO_USER_ID ? (
                   <div className="py-12 text-center">
                     <p className="text-[10px] italic opacity-40 uppercase tracking-widest">{t.noFriends}</p>
@@ -820,12 +864,7 @@ const App: React.FC = () => {
                 <button className="w-full mt-10 py-4 bg-[var(--accent)] text-[var(--accent-text)] rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg" onClick={() => setSidebarModule('default')}>Tercihleri Uygula</button>
               </div>
             ) : (
-              <div className="flex flex-col gap-6 animate-fade">
-                <div className="p-8 border border-[var(--border)] rounded-[2.5rem] bg-gradient-to-br from-white/5 to-transparent shadow-sm relative overflow-hidden group">
-                    <div className="absolute -right-4 -top-4 w-20 h-20 bg-[var(--accent)] opacity-5 rounded-full blur-2xl group-hover:opacity-10 transition-all"></div>
-                    <div className="text-[10px] font-black text-[var(--text-dim)] mb-3 uppercase tracking-[0.3em]">{t.cognitiveSpecialization}</div>
-                    <div className="text-sm font-black uppercase text-[var(--text-bright)] tracking-tight">{user?.field}</div>
-                </div>
+              <div className="flex flex-col gap-4 animate-fade">
                 <nav className="flex flex-col gap-3">
                     <button className="btn-nav py-5 px-6 border border-[var(--border)] rounded-[1.5rem] hover:shadow-md" onClick={() => setSidebarModule('analytics')}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
@@ -837,7 +876,7 @@ const App: React.FC = () => {
                     </button>
                     <button className="btn-nav py-5 px-6 border border-[var(--border)] rounded-[1.5rem] hover:shadow-md" onClick={() => setSidebarModule('account')}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                      {t.account}
+                      {t.socialMenu}
                     </button>
                     <button className="btn-nav py-5 px-6 border border-[var(--border)] rounded-[1.5rem] hover:shadow-md" onClick={() => setSidebarModule('settings')}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
