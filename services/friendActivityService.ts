@@ -14,13 +14,13 @@ export async function getFriendActivities(
   const friendIds = await getFriendIds(userId);
   if (friendIds.length === 0) return [];
 
-  // Get friends' profiles
-  const { data: profiles, error: profilesError } = await supabase
-    .from('profiles')
-    .select('id, name, username')
-    .in('id', friendIds);
+  // Get friends' profiles using RPC to bypass RLS
+  const { data: profiles, error: profilesError } = await supabase.rpc('get_friends');
 
-  if (profilesError || !profiles || profiles.length === 0) return [];
+  if (profilesError || !profiles || profiles.length === 0) {
+    console.warn('getFriendActivities get_friends RPC error:', profilesError);
+    return [];
+  }
 
   // Get active sessions for friends
   const { data: activeSessions, error: activeError } = await supabase
