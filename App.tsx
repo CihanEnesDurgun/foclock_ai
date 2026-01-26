@@ -45,6 +45,7 @@ const App: React.FC = () => {
   const [sidebarModule, setSidebarModule] = useState<'default' | 'analytics' | 'settings' | 'social' | 'account'>('default');
   const [lang, setLang] = useState<'tr' | 'en'>('tr');
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [testMode, setTestMode] = useState(false); // 1 dakika = 1 saniye
   const [timeLeft, setTimeLeft] = useState(1500);
   const [sessionDuration, setSessionDuration] = useState(1500);
   const [status, setStatus] = useState<TimerStatus>(TimerStatus.IDLE);
@@ -177,9 +178,10 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (status === TimerStatus.RUNNING && timeLeft > 0) {
+      const interval = testMode ? 1000 : 1000; // Test mode: 1 second = 1 minute (60 seconds)
       timerRef.current = setInterval(() => {
         setTimeLeft(prev => {
-          const newTime = prev - 1;
+          const newTime = testMode ? Math.max(0, prev - 60) : prev - 1; // Test mode: subtract 60 seconds per tick
           // Update active session with current time remaining
           if (user && currentTask && user.id !== DEMO_USER_ID) {
             const durationMins = Math.floor(sessionDuration / 60);
@@ -193,7 +195,7 @@ const App: React.FC = () => {
           }
           return newTime;
         });
-      }, 1000);
+      }, interval);
       
       // Initialize active session immediately when timer starts
       if (user && currentTask && user.id !== DEMO_USER_ID) {
@@ -741,7 +743,12 @@ const App: React.FC = () => {
             <div key={quoteIndex} className="mt-14 text-[11px] font-medium text-[var(--text-dim)] max-w-sm text-center tracking-widest leading-relaxed min-h-10 px-10 italic animate-fade">{getQuote(lang, quoteIndex)}</div>
         </div>
         <div className="flex gap-12">
-            <button onClick={() => setStatus(status === TimerStatus.RUNNING ? TimerStatus.PAUSED : TimerStatus.RUNNING)} className="w-24 h-24 rounded-full bg-[var(--accent)] text-[var(--accent-text)] flex items-center justify-center transition-all hover:scale-110 active:scale-90 shadow-2xl disabled:opacity-20" disabled={!currentTask}>
+            <button onClick={() => {
+              if (!currentTask) {
+                setCurrentTask(lang === 'tr' ? 'Çalışma Oturumu' : 'Work Session');
+              }
+              setStatus(status === TimerStatus.RUNNING ? TimerStatus.PAUSED : TimerStatus.RUNNING);
+            }} className="w-24 h-24 rounded-full bg-[var(--accent)] text-[var(--accent-text)] flex items-center justify-center transition-all hover:scale-110 active:scale-90 shadow-2xl">
                 {status === TimerStatus.RUNNING ? <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> : <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>}
             </button>
             <button onClick={() => { setStatus(TimerStatus.IDLE); setTimeLeft(sessionDuration); }} className="w-24 h-24 rounded-full border-2 border-[var(--border)] text-[var(--text-dim)] flex items-center justify-center hover:text-[var(--text-bright)] hover:border-[var(--text-bright)] active:scale-90 transition-all shadow-lg">
@@ -802,27 +809,55 @@ const App: React.FC = () => {
                       const isActive = fa.status === 'flow';
                       const elapsed = fa.totalDuration > 0 ? Math.floor((fa.totalDuration - fa.timeRemaining) / 60) : 0;
                       const totalMins = Math.floor(fa.totalDuration / 60);
+                      const progress = fa.totalDuration > 0 ? (fa.totalDuration - fa.timeRemaining) / fa.totalDuration : 0;
+                      
+                      // Calculate time ago for inactive sessions
+                      let timeAgo = '';
+                      if (!isActive && fa.lastSeen) {
+                        const lastSeenDate = new Date(fa.lastSeen);
+                        const minutesAgo = Math.floor((Date.now() - lastSeenDate.getTime()) / (1000 * 60));
+                        if (minutesAgo < 60) {
+                          timeAgo = `${minutesAgo}m ago`;
+                        } else {
+                          const hoursAgo = Math.floor(minutesAgo / 60);
+                          timeAgo = `${hoursAgo}h ago`;
+                        }
+                      }
+                      
                       return (
-                        <div key={fa.id} className="p-4 border border-[var(--border)] rounded-2xl bg-white/5 shadow-sm">
-                          <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-white/20 to-white/5 flex items-center justify-center text-[11px] font-black text-[var(--text-bright)] shrink-0">
-                              {fa.name[0]}
+                        <div key={fa.id} className="p-4 border border-[var(--border)] rounded-2xl bg-white/5 shadow-sm relative">
+                          <div className="flex items-start gap-3">
+                            <div className="relative shrink-0">
+                              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-white/20 to-white/5 flex items-center justify-center text-[14px] font-black text-[var(--text-bright)]">
+                                {fa.name[0]}
+                              </div>
+                              {isActive && (
+                                <div className="absolute -bottom-1 -left-1 w-4 h-4 rounded-full bg-[var(--status-flow)] animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)] border-2 border-[var(--bg)]"></div>
+                              )}
+                              {!isActive && fa.lastSeen && (
+                                <div className="absolute -bottom-1 -left-1 w-3 h-3 rounded-full bg-orange-500 border-2 border-[var(--bg)]"></div>
+                              )}
+                              {!isActive && !fa.lastSeen && (
+                                <div className="absolute -bottom-1 -left-1 w-3 h-3 rounded-full bg-[var(--text-dim)] border-2 border-[var(--bg)]"></div>
+                              )}
                             </div>
                             <div className="min-w-0 flex-1">
-                              <div className="text-[10px] font-black uppercase tracking-tight text-[var(--text-bright)] truncate">{fa.name}</div>
-                              <div className="text-[9px] text-[var(--text-dim)] truncate mt-0.5">{fa.activity}</div>
-                              <div className="flex items-center gap-2 mt-2">
-                                {isActive ? (
-                                  <>
-                                    <span className={`w-1.5 h-1.5 rounded-full ${fa.status === 'flow' ? 'bg-[var(--status-flow)] animate-pulse' : 'bg-[var(--status-idle)]'}`} />
-                                    <span className="text-[9px] font-bold uppercase text-[var(--text-dim)]">
-                                      {elapsed} / {totalMins} {t.unitMins}
-                                    </span>
-                                  </>
-                                ) : (
-                                  <span className="text-[9px] font-bold uppercase text-[var(--text-dim)]">
-                                    {totalMins} {t.unitMins}
-                                  </span>
+                              <div className="text-[11px] font-black uppercase tracking-tight text-[var(--text-bright)] truncate mb-1">{fa.name}</div>
+                              <div className="text-[10px] text-[var(--text-dim)] truncate mb-2">{fa.activity || (lang === 'tr' ? 'Boş' : 'Empty')}</div>
+                              {isActive && fa.totalDuration > 0 && (
+                                <div className="h-1 bg-[var(--border)] rounded-full overflow-hidden mb-2">
+                                  <div 
+                                    className="h-full bg-[var(--status-flow)] transition-all duration-500"
+                                    style={{ width: `${progress * 100}%` }}
+                                  ></div>
+                                </div>
+                              )}
+                              <div className="flex items-center justify-between">
+                                <span className="text-[9px] font-bold uppercase text-[var(--text-dim)]">
+                                  {isActive ? `${elapsed}m` : totalMins > 0 ? `${totalMins}m` : ''}
+                                </span>
+                                {timeAgo && (
+                                  <span className="text-[9px] text-[var(--text-dim)]">{timeAgo}</span>
                                 )}
                               </div>
                             </div>
@@ -945,6 +980,21 @@ const App: React.FC = () => {
                   <div className="flex justify-between items-center">
                     <span className="text-[10px] font-black uppercase text-[var(--text-dim)]">Dil</span>
                     <button onClick={() => setLang(lang === 'tr' ? 'en' : 'tr')} className="px-5 py-2 border border-[var(--border)] rounded-xl bg-white/5 text-[10px] font-black uppercase hover:border-[var(--text-bright)] transition-all">{lang}</button>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-black uppercase text-[var(--text-dim)]">Test Modu</span>
+                      <span className="text-[8px] text-[var(--text-dim)] mt-1 opacity-70">{lang === 'tr' ? '1 dakika = 1 saniye' : '1 minute = 1 second'}</span>
+                    </div>
+                    <button onClick={() => {
+                      setTestMode(!testMode);
+                      if (status === TimerStatus.RUNNING) {
+                        setStatus(TimerStatus.IDLE);
+                        setTimeLeft(sessionDuration);
+                      }
+                    }} className={`px-5 py-2 border rounded-xl text-[10px] font-black uppercase transition-all ${testMode ? 'bg-[var(--status-flow)]/20 border-[var(--status-flow)] text-[var(--status-flow)]' : 'border-[var(--border)] bg-white/5 text-[var(--text-dim)] hover:border-[var(--text-bright)]'}`}>
+                      {testMode ? (lang === 'tr' ? 'Aktif' : 'On') : (lang === 'tr' ? 'Kapalı' : 'Off')}
+                    </button>
                   </div>
                   <div className="pt-6 border-t border-[var(--border)]">
                      <span className="text-[8px] font-bold text-[var(--text-dim)] uppercase tracking-widest">Sürüm: FoClock AI Neural Beta 1.1</span>
