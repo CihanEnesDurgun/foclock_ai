@@ -1,5 +1,36 @@
 # Changelog
 
+## [1.3.0] – Right Sidebar & Profile Fixes (2025-01-25)
+
+### Right Sidebar UI Improvements
+
+- **Username display:** Full name replaced with `@username` format (e.g., `@cihanenesdurgun`) in the right sidebar header.
+- **Expertise (Uzmanlık):** Large "BİLİŞSEL UZMANLIK" card removed; expertise text now shown as small text directly under the username.
+- **Menu rename:** "HESAP" (Account) renamed to **"SOSYAL"** (Social) for friend request functionality.
+
+### Database & Profile Fixes
+
+- **Email column:** Added `email` column to `profiles` table for visibility in Supabase Table Editor (emails also stored in `auth.users`).
+- **Profile insert error handling:** Improved error messages and console logging for profile creation failures during registration.
+- **Login profile recovery:** If a user exists in `auth.users` but not in `profiles`, login now automatically creates the profile via upsert (prevents orphaned auth accounts).
+
+### SQL Scripts Cleanup
+
+- **Consolidated scripts:** Replaced multiple fragmented SQL files with:
+  - `scripts/schema.sql` – Single source of truth for database schema (idempotent).
+  - `scripts/cleanup-data.sql` – Complete data reset for fresh testing.
+  - `scripts/README-SQL.md` – Step-by-step setup instructions.
+- **Removed deprecated:** `username-and-friends.sql`, `fix-profiles-rls.sql`, `fix-trigger-error.sql`, `confirm-user-email.sql`.
+
+### Files Modified
+
+- `App.tsx` – Right sidebar header (username, expertise), menu navigation.
+- `locales.ts` – Added `socialMenu: "SOSYAL"` / `"SOCIAL"`.
+- `services/authService.ts` – Email insert, error logging, login profile upsert.
+- `scripts/schema.sql` – Added `email` column, updated documentation.
+
+---
+
 ## [1.2.0] – Username & Friends (2025-01-24)
 
 ### Username & Registration
