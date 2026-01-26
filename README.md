@@ -2,6 +2,87 @@
 <img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
 
+# 🧠 FoClock AI - Nöral Odak Motoru
+
+**Bilimsel temellere dayalı, AI destekli odak yönetimi sistemi**
+
+FoClock AI, üretkenliğinizi artırmak için tasarlanmış, yapay zeka destekli bir Pomodoro timer ve görev planlama uygulamasıdır. Ultradian ritimler ve Flow State protokolü gibi bilimsel yaklaşımları kullanarak, beyninizin doğal çalışma döngülerine uyum sağlar ve maksimum verimlilik için optimize edilmiş çalışma oturumları oluşturur.
+
+## ✨ Özellikler
+
+### 🤖 AI Destekli Planlama
+Google Gemini AI entegrasyonu ile görevlerinizi akıllıca planlayın. Sistem, alanınıza ve hedeflerinize göre özelleştirilmiş çalışma planları oluşturur ve her oturum için motivasyonel mesajlar sunar.
+
+### ⏱️ Akıllı Zaman Yönetimi
+- **Ultradian Ritimler**: 90 dakikalık derin odak blokları ve 20 dakikalık zorunlu resetler ile doğal ritminize uyum sağlayın
+- **Flow State Protokolü**: Bilişsel yük teorisine dayalı sistem ile prefrontal korteksinizi aşırı yükten koruyun
+- **Esnek Pomodoro**: Görevlerinize göre özelleştirilebilir zaman blokları
+
+### 👥 Sosyal Özellikler
+- **Arkadaş Sistemi**: Kullanıcı adı ile arkadaşlarınızı bulun ve ekleyin
+- **Gerçek Zamanlı Aktivite Takibi**: Arkadaşlarınızın aktif çalışma oturumlarını görüntüleyin ve motivasyon alın
+- **Sosyal Bağlantılar**: Arkadaşlık istekleri gönderin ve kabul edin
+
+### 📊 Analitik ve İstatistikler
+- Detaylı çalışma geçmişi
+- Toplam odak süresi takibi
+- Görev bazlı performans analizi
+- Tamamlanan oturum özetleri
+
+### 🎨 Modern ve Minimalist Arayüz
+- Koyu/Açık tema desteği
+- Türkçe ve İngilizce dil seçenekleri
+- Responsive tasarım
+- Akıcı animasyonlar ve geçişler
+
+## 🚀 Nasıl Kullanılır?
+
+### 1. Hesap Oluşturma
+- Ana sayfada "Hesap Oluştur" butonuna tıklayın
+- E-posta, şifre, ad, alan ve benzersiz bir kullanıcı adı girin
+- Hesabınızı oluşturun ve giriş yapın
+
+### 2. Görev Planlama
+- Sol paneldeki sohbet alanına görevlerinizi yazın (örn: "React projesi için component yapısını tasarla")
+- AI, görevlerinizi analiz eder ve size özel bir plan oluşturur
+- Plan onaylandığında, görevler otomatik olarak kuyruğa eklenir
+
+### 3. Çalışma Oturumu Başlatma
+- Kuyruktan bir görevi seçin
+- Merkezdeki timer'ı başlatın (▶️ butonu)
+- Odaklanın ve çalışmaya başlayın
+- Timer bittiğinde otomatik olarak tamamlanır ve istatistiklerinize eklenir
+
+### 4. Sosyal Özellikler
+- Sağ panelde "Hesap" sekmesine gidin
+- Kullanıcı adı ile arkadaş arayın ve istek gönderin
+- "Sosyal" sekmesinden arkadaşlarınızın aktif oturumlarını görüntüleyin
+
+### 5. İstatistikleri İnceleme
+- Sağ panelde "Geçmiş" sekmesine tıklayın
+- Tamamlanan oturumlarınızı ve toplam odak sürenizi görüntüleyin
+
+### 6. Ayarlar
+- Sağ panelde "Ayarlar" sekmesinden:
+  - Tema değiştirme (Koyu/Açık)
+  - Dil seçimi (Türkçe/İngilizce)
+  - Test modu (1 dakika = 1 saniye, hızlı test için)
+
+## 🎯 Demo Modu
+Hesap oluşturmadan önce uygulamayı test etmek isterseniz, giriş ekranında "Demo Dene" butonunu kullanabilirsiniz. Demo modunda tüm özellikler çalışır, ancak veriler kaydedilmez.
+
+## 🔧 Teknik Detaylar
+
+### Gereksinimler
+- Node.js (v18 veya üzeri)
+- Gemini API anahtarı
+- Supabase hesabı (veritabanı için)
+
+### Kurulum ve Çalıştırma
+Aşağıdaki bölümlerde detaylı kurulum talimatları bulunmaktadır.
+
+---
+
 # Run and deploy your AI Studio app
 
 This contains everything you need to run your app locally.
