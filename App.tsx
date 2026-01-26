@@ -128,13 +128,24 @@ const App: React.FC = () => {
     return () => clearInterval(id);
   }, [view, lang]);
 
-  // Arkadaş etkinliği: sağ menüde social açıldığında veri çek
+  // Arkadaş etkinliği: sağ menüde social açıldığında veri çek + gerçek zamanlı güncelleme
   useEffect(() => {
     if (sidebarModule !== 'social' || !user) return;
+    
+    // İlk yükleme
     setLoadingFriends(true);
     getFriendActivities(user.id, lang)
       .then(setFriendActivities)
       .finally(() => setLoadingFriends(false));
+    
+    // Gerçek zamanlı güncelleme: her 1 saniyede bir
+    const interval = setInterval(() => {
+      getFriendActivities(user.id, lang)
+        .then(setFriendActivities)
+        .catch(err => console.warn('Friend activities update error:', err));
+    }, 1000);
+    
+    return () => clearInterval(interval);
   }, [sidebarModule, user?.id, user?.friends?.length, lang]);
 
   // Hesap: arkadaşlık isteklerini çek
