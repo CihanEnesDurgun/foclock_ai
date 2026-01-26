@@ -825,41 +825,41 @@ const App: React.FC = () => {
                       }
                       
                       return (
-                        <div key={fa.id} className="p-4 border border-[var(--border)] rounded-2xl bg-white/5 shadow-sm relative">
-                          <div className="flex items-start gap-3">
+                        <div key={fa.id} className="p-2.5 border border-[var(--border)] rounded-xl bg-white/5 relative">
+                          <div className="flex items-center gap-2.5">
                             <div className="relative shrink-0">
-                              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-white/20 to-white/5 flex items-center justify-center text-[14px] font-black text-[var(--text-bright)]">
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-white/20 to-white/5 flex items-center justify-center text-[11px] font-black text-[var(--text-bright)]">
                                 {fa.name[0]}
                               </div>
                               {isActive && (
-                                <div className="absolute -bottom-1 -left-1 w-4 h-4 rounded-full bg-[var(--status-flow)] animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)] border-2 border-[var(--bg)]"></div>
+                                <div className="absolute -bottom-0.5 -left-0.5 w-2.5 h-2.5 rounded-full bg-[var(--status-flow)] animate-pulse shadow-[0_0_6px_rgba(34,197,94,0.6)] border border-[var(--bg)]"></div>
                               )}
                               {!isActive && fa.lastSeen && (
-                                <div className="absolute -bottom-1 -left-1 w-3 h-3 rounded-full bg-orange-500 border-2 border-[var(--bg)]"></div>
+                                <div className="absolute -bottom-0.5 -left-0.5 w-2 h-2 rounded-full bg-orange-500 border border-[var(--bg)]"></div>
                               )}
                               {!isActive && !fa.lastSeen && (
-                                <div className="absolute -bottom-1 -left-1 w-3 h-3 rounded-full bg-[var(--text-dim)] border-2 border-[var(--bg)]"></div>
+                                <div className="absolute -bottom-0.5 -left-0.5 w-2 h-2 rounded-full bg-[var(--text-dim)] border border-[var(--bg)]"></div>
                               )}
                             </div>
                             <div className="min-w-0 flex-1">
-                              <div className="text-[11px] font-black uppercase tracking-tight text-[var(--text-bright)] truncate mb-1">{fa.name}</div>
-                              <div className="text-[10px] text-[var(--text-dim)] truncate mb-2">{fa.activity || (lang === 'tr' ? 'Boş' : 'Empty')}</div>
+                              <div className="flex items-center justify-between gap-2 mb-0.5">
+                                <div className="text-[10px] font-black uppercase tracking-tight text-[var(--text-bright)] truncate">{fa.name}</div>
+                                <span className="text-[9px] font-bold text-[var(--text-dim)] shrink-0">
+                                  {isActive ? `${elapsed}m` : totalMins > 0 ? `${totalMins}m` : ''}
+                                </span>
+                              </div>
+                              <div className="text-[9px] text-[var(--text-dim)] truncate mb-1.5">{fa.activity || (lang === 'tr' ? 'Boş' : 'Empty')}</div>
                               {isActive && fa.totalDuration > 0 && (
-                                <div className="h-1 bg-[var(--border)] rounded-full overflow-hidden mb-2">
+                                <div className="h-0.5 bg-[var(--border)] rounded-full overflow-hidden">
                                   <div 
                                     className="h-full bg-[var(--status-flow)] transition-all duration-500"
                                     style={{ width: `${progress * 100}%` }}
                                   ></div>
                                 </div>
                               )}
-                              <div className="flex items-center justify-between">
-                                <span className="text-[9px] font-bold uppercase text-[var(--text-dim)]">
-                                  {isActive ? `${elapsed}m` : totalMins > 0 ? `${totalMins}m` : ''}
-                                </span>
-                                {timeAgo && (
-                                  <span className="text-[9px] text-[var(--text-dim)]">{timeAgo}</span>
-                                )}
-                              </div>
+                              {timeAgo && !isActive && (
+                                <div className="text-[8px] text-[var(--text-dim)] mt-1">{timeAgo}</div>
+                              )}
                             </div>
                           </div>
                         </div>
