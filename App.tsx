@@ -177,10 +177,26 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (status === TimerStatus.RUNNING && timeLeft > 0) {
-      timerRef.current = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
-      // Update active session every second when running
+      timerRef.current = setInterval(() => {
+        setTimeLeft(prev => {
+          const newTime = prev - 1;
+          // Update active session with current time remaining
+          if (user && currentTask && user.id !== DEMO_USER_ID) {
+            const durationMins = Math.floor(sessionDuration / 60);
+            authService.updateActiveSession(
+              user.id,
+              currentTask,
+              durationMins,
+              newTime,
+              'running'
+            );
+          }
+          return newTime;
+        });
+      }, 1000);
+      
+      // Initialize active session immediately when timer starts
       if (user && currentTask && user.id !== DEMO_USER_ID) {
-        // Initialize active session immediately when timer starts
         const durationMins = Math.floor(sessionDuration / 60);
         authService.updateActiveSession(
           user.id,
@@ -189,21 +205,6 @@ const App: React.FC = () => {
           timeLeft,
           'running'
         );
-        
-        const updateInterval = setInterval(async () => {
-          const durationMins = Math.floor(sessionDuration / 60);
-          await authService.updateActiveSession(
-            user.id,
-            currentTask,
-            durationMins,
-            timeLeft,
-            'running'
-          );
-        }, 1000);
-        return () => {
-          clearInterval(timerRef.current!);
-          clearInterval(updateInterval);
-        };
       }
     } else if (timeLeft === 0 && status === TimerStatus.RUNNING) {
       handleComplete();
