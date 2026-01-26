@@ -12,7 +12,9 @@ import {
   getIncomingFriendRequests,
   acceptFriendRequest,
   rejectFriendRequest,
+  getFriends,
   type SearchUser,
+  type Friend,
 } from './services/friendService';
 import { locales } from './locales';
 import { getQuote, quoteCount, ROTATION_INTERVAL_MS } from './quotes';
@@ -37,6 +39,7 @@ const App: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [authError, setAuthError] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   
   const [sidebarModule, setSidebarModule] = useState<'default' | 'analytics' | 'settings' | 'social' | 'account'>('default');
   const [lang, setLang] = useState<'tr' | 'en'>('tr');
@@ -65,6 +68,8 @@ const App: React.FC = () => {
   const [incomingRequests, setIncomingRequests] = useState<FriendRequest[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(false);
   const [addingUserId, setAddingUserId] = useState<string | null>(null);
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [loadingFriendsList, setLoadingFriendsList] = useState(false);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -138,6 +143,15 @@ const App: React.FC = () => {
       .then(setIncomingRequests)
       .finally(() => setLoadingRequests(false));
   }, [sidebarModule, user?.id]);
+
+  // Hesap: arkadaşları çek
+  useEffect(() => {
+    if (sidebarModule !== 'account' || !user || user.id === DEMO_USER_ID) return;
+    setLoadingFriendsList(true);
+    getFriends(user.id)
+      .then(setFriends)
+      .finally(() => setLoadingFriendsList(false));
+  }, [sidebarModule, user?.id, user?.friends]);
 
   // Kullanıcı adı kullanılabilirlik (kayıt formu, debounce)
   useEffect(() => {
@@ -545,7 +559,16 @@ const App: React.FC = () => {
               </div>
               <div>
                 {!isLogin && <label htmlFor="auth-password" className="block text-[10px] font-bold uppercase tracking-wider text-[var(--text-dim)] mb-1">{t.password}</label>}
-                <input id="auth-password" name="password" type="password" required minLength={6} className="input-auth w-full py-2.5" placeholder={t.password} autoComplete={isLogin ? 'current-password' : 'new-password'} />
+                <div className="relative">
+                  <input id="auth-password" name="password" type={showPassword ? 'text' : 'password'} required minLength={6} className="input-auth w-full py-2.5 pr-10" placeholder={t.password} autoComplete={isLogin ? 'current-password' : 'new-password'} />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-dim)] hover:text-[var(--text-bright)] transition-all">
+                    {showPassword ? (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                    ) : (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    )}
+                  </button>
+                </div>
                 {!isLogin && <p className="mt-1 text-[10px] text-[var(--text-dim)]">{t.passwordHint}</p>}
               </div>
 
@@ -835,6 +858,29 @@ const App: React.FC = () => {
                               <div className="flex gap-2 shrink-0">
                                 <button type="button" onClick={() => handleAcceptRequest(r.id)} className="px-3 py-1.5 rounded-lg bg-[var(--status-flow)]/20 text-[var(--status-flow)] text-[9px] font-black uppercase hover:bg-[var(--status-flow)]/30 transition-all">{t.accept}</button>
                                 <button type="button" onClick={() => handleRejectRequest(r.id)} className="px-3 py-1.5 rounded-lg bg-red-500/10 text-red-500 text-[9px] font-black uppercase hover:bg-red-500/20 transition-all">{t.reject}</button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="pt-6 border-t border-[var(--border)] mt-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <h5 className="text-[10px] font-black text-[var(--text-dim)] uppercase tracking-widest">{t.myFriends}</h5>
+                        <span className="text-[9px] font-black text-[var(--text-bright)] bg-white/5 px-2 py-1 rounded-full">{friends.length}</span>
+                      </div>
+                      {loadingFriendsList ? (
+                        <p className="text-[10px] italic opacity-40">{t.loading}</p>
+                      ) : friends.length === 0 ? (
+                        <p className="text-[10px] italic opacity-40">{t.noFriendsYet}</p>
+                      ) : (
+                        <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                          {friends.map((f) => (
+                            <div key={f.id} className="p-3 border border-[var(--border)] rounded-xl flex items-center gap-3 bg-white/5">
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-white/20 to-white/5 flex items-center justify-center text-[10px] font-black text-[var(--text-bright)] shrink-0">{f.name[0]}</div>
+                              <div className="min-w-0 flex-1">
+                                <div className="text-[10px] font-black uppercase truncate">@{f.username || f.name}</div>
+                                <div className="text-[9px] text-[var(--text-dim)] truncate">{f.name}</div>
                               </div>
                             </div>
                           ))}
