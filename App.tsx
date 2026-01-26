@@ -13,6 +13,7 @@ import {
   acceptFriendRequest,
   rejectFriendRequest,
   getFriends,
+  getFriendIds,
   type SearchUser,
   type Friend,
 } from './services/friendService';
@@ -133,7 +134,7 @@ const App: React.FC = () => {
     getFriendActivities(user.id, lang)
       .then(setFriendActivities)
       .finally(() => setLoadingFriends(false));
-  }, [sidebarModule, user?.id, lang]);
+  }, [sidebarModule, user?.id, user?.friends?.length, lang]);
 
   // Hesap: arkadaşlık isteklerini çek
   useEffect(() => {
@@ -151,7 +152,7 @@ const App: React.FC = () => {
     getFriends(user.id)
       .then(setFriends)
       .finally(() => setLoadingFriendsList(false));
-  }, [sidebarModule, user?.id, user?.friends]);
+  }, [sidebarModule, user?.id, user?.friends?.length]);
 
   // Kullanıcı adı kullanılabilirlik (kayıt formu, debounce)
   useEffect(() => {
@@ -300,10 +301,19 @@ const App: React.FC = () => {
 
   const handleAcceptRequest = async (requestId: string) => {
     if (!user || user.id === DEMO_USER_ID) return;
+    const request = incomingRequests.find((r) => r.id === requestId);
     const { success } = await acceptFriendRequest(requestId, user.id);
-    if (success) {
+    if (success && request) {
       setIncomingRequests((prev) => prev.filter((r) => r.id !== requestId));
-      setUser((u) => (!u ? u : { ...u, friends: [...u.friends, (incomingRequests.find((r) => r.id === requestId)?.from_user_id ?? '')].filter(Boolean) }));
+      // Update user.friends immediately
+      const newFriendId = request.from_user_id;
+      setUser((u) => (!u ? u : { ...u, friends: [...u.friends, newFriendId].filter((id, idx, arr) => arr.indexOf(id) === idx) }));
+      // Refresh friends list from database
+      const updatedFriends = await getFriends(user.id);
+      setFriends(updatedFriends);
+      // Also refresh user.friends from database to ensure consistency
+      const friendIds = await getFriendIds(user.id);
+      setUser((u) => (!u ? u : { ...u, friends: friendIds }));
     }
   };
 
