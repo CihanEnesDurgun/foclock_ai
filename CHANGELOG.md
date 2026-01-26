@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.4.0] – Documentation & README Update (2026-01-26)
+
+### Documentation Improvements
+
+- **Comprehensive README:** Added detailed project introduction, features overview, and step-by-step usage guide in Turkish
+- **User-friendly documentation:** Clear explanation of what FoClock AI is and how to use it
+- **Feature highlights:** Documented AI-powered planning, smart time management, social features, analytics, and modern UI
+- **Quick start guide:** Step-by-step instructions for account creation, task planning, work sessions, social features, and settings
+
+### Files Modified
+
+- `README.md` – Added comprehensive project introduction and usage guide
+
+---
+
 ## [1.3.0] – Right Sidebar & Profile Fixes (2025-01-25)
 
 ### Right Sidebar UI Improvements
