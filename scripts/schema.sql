@@ -75,3 +75,24 @@ LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
   ORDER BY fr.created_at DESC;
 $$;
 GRANT EXECUTE ON FUNCTION get_incoming_friend_requests() TO authenticated;
+
+-- 8. RPC: Email confirmation açıkken profil oluştur (SECURITY DEFINER, RLS bypass)
+CREATE OR REPLACE FUNCTION create_user_profile(
+  p_user_id uuid,
+  p_email text,
+  p_name text,
+  p_field text,
+  p_username text,
+  p_username_lower text,
+  p_preferences jsonb,
+  p_project_tags jsonb
+)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  INSERT INTO profiles (id, email, name, field, username, username_lower, preferences, project_tags)
+  VALUES (p_user_id, p_email, p_name, p_field, p_username, p_username_lower, p_preferences, p_project_tags)
+  ON CONFLICT (id) DO NOTHING;
+END;
+$$;
+GRANT EXECUTE ON FUNCTION create_user_profile(uuid, text, text, text, text, text, jsonb, jsonb) TO anon;
+GRANT EXECUTE ON FUNCTION create_user_profile(uuid, text, text, text, text, text, jsonb, jsonb) TO authenticated;

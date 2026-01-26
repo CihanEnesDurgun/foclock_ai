@@ -32,26 +32,58 @@ export const authService = {
       session = (await supabase.auth.getSession()).data.session;
     }
 
-    if (!session) {
-      return { success: false, error: 'Oturum açılamadı. E-posta doğrulaması gerekebilir.' };
+    // Email confirmation açıksa session olmayabilir; yine de profil oluşturmayı dene
+    // RLS için SECURITY DEFINER fonksiyonu kullanacağız veya service role key gerekebilir
+    // Şimdilik: session varsa normal insert, yoksa RPC ile insert dene
+    let profileInserted = false;
+    
+    if (session) {
+      const { error: profileError } = await supabase.from('profiles').insert({
+        id: authData.user.id,
+        email: userData.email ?? authData.user.email ?? null,
+        name: userData.name || 'User',
+        field: userData.field || 'General',
+        username,
+        username_lower: username.toLowerCase(),
+        preferences: DEFAULT_PREFS,
+        project_tags: [],
+      });
+
+      if (profileError) {
+        console.error('[authService] Profile insert failed (with session):', profileError);
+        // RLS hatası olabilir; RPC ile dene
+      } else {
+        profileInserted = true;
+      }
     }
 
-    const { error: profileError } = await supabase.from('profiles').insert({
-      id: authData.user.id,
-      email: userData.email ?? authData.user.email ?? null,
-      name: userData.name || 'User',
-      field: userData.field || 'General',
-      username,
-      username_lower: username.toLowerCase(),
-      preferences: DEFAULT_PREFS,
-      project_tags: [],
-    });
+    // Session yoksa veya insert başarısızsa RPC ile dene
+    if (!profileInserted) {
+      const { error: rpcError } = await supabase.rpc('create_user_profile', {
+        p_user_id: authData.user.id,
+        p_email: userData.email ?? authData.user.email ?? null,
+        p_name: userData.name || 'User',
+        p_field: userData.field || 'General',
+        p_username: username,
+        p_username_lower: username.toLowerCase(),
+        p_preferences: DEFAULT_PREFS,
+        p_project_tags: [],
+      });
 
-    if (profileError) {
-      console.error('[authService] Profile insert failed:', profileError);
-      if (/duplicate|unique|already exists/i.test(profileError.message))
-        return { success: false, error: 'Bu e-posta veya kullanıcı adı zaten kullanılıyor.' };
-      return { success: false, error: `Profil kaydedilemedi: ${profileError.message}` };
+      if (rpcError) {
+        console.error('[authService] Profile RPC insert failed:', rpcError);
+        // RPC yoksa manuel insert dene (anon key ile, RLS bypass için)
+        // Son çare: kullanıcıya email confirmation sonrası profil oluşturulacağını söyle
+        if (!session) {
+          return { 
+            success: false, 
+            error: 'Kayıt başarılı ancak profil oluşturulamadı. E-posta doğrulamasından sonra tekrar giriş yapın veya destek ile iletişime geçin.' 
+          };
+        }
+        if (/duplicate|unique|already exists/i.test(rpcError.message))
+          return { success: false, error: 'Bu e-posta veya kullanıcı adı zaten kullanılıyor.' };
+        return { success: false, error: `Profil kaydedilemedi: ${rpcError.message}` };
+      }
     }
 
     return { success: true };

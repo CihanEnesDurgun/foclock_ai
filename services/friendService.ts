@@ -121,3 +121,30 @@ export async function getFriendIds(userId: string): Promise<string[]> {
   }
   return ids;
 }
+
+export interface Friend {
+  id: string;
+  username: string | null;
+  name: string;
+}
+
+export async function getFriends(userId: string): Promise<Friend[]> {
+  const friendIds = await getFriendIds(userId);
+  if (friendIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, username, name')
+    .in('id', friendIds);
+
+  if (error) {
+    console.warn('getFriends', error);
+    return [];
+  }
+
+  return (data ?? []).map((p: { id: string; username: string | null; name: string }) => ({
+    id: p.id,
+    username: p.username,
+    name: p.name,
+  }));
+}
