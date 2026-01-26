@@ -171,6 +171,29 @@ export const authService = {
 
   saveCompletedSession: async (userId: string, title: string, duration: number) => {
     await supabase.from('sessions').insert({ user_id: userId, task_title: title, duration_minutes: duration });
+    // Remove from active_sessions when completed
+    await supabase.from('active_sessions').delete().eq('user_id', userId);
+  },
+
+  updateActiveSession: async (
+    userId: string,
+    taskTitle: string,
+    durationMinutes: number,
+    timeRemainingSeconds: number,
+    status: 'running' | 'paused'
+  ) => {
+    await supabase.from('active_sessions').upsert({
+      user_id: userId,
+      task_title: taskTitle,
+      duration_minutes: durationMinutes,
+      time_remaining_seconds: timeRemainingSeconds,
+      status,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id' });
+  },
+
+  clearActiveSession: async (userId: string) => {
+    await supabase.from('active_sessions').delete().eq('user_id', userId);
   },
 
   getStats: async (userId: string) => {

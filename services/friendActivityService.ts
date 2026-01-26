@@ -4,8 +4,7 @@ import { getFriendIds } from './friendService';
 
 /**
  * Friend Activity API.
- * Fetches friends' last completed sessions from Supabase.
- * Note: Active session tracking requires an active_sessions table (future enhancement).
+ * Fetches friends' active sessions and last completed sessions from Supabase.
  */
 
 export async function getFriendActivities(
@@ -23,8 +22,19 @@ export async function getFriendActivities(
 
   if (profilesError || !profiles || profiles.length === 0) return [];
 
-  // Get last session for each friend
-  const { data: sessions, error: sessionsError } = await supabase
+  // Get active sessions for friends
+  const { data: activeSessions, error: activeError } = await supabase
+    .from('active_sessions')
+    .select('user_id, task_title, duration_minutes, time_remaining_seconds, status, updated_at')
+    .in('user_id', friendIds)
+    .eq('status', 'running');
+
+  if (activeError) {
+    console.warn('getFriendActivities active_sessions error:', activeError);
+  }
+
+  // Get last completed session for each friend (for idle friends)
+  const { data: completedSessions, error: sessionsError } = await supabase
     .from('sessions')
     .select('user_id, task_title, duration_minutes, completed_at')
     .in('user_id', friendIds)
@@ -32,28 +42,54 @@ export async function getFriendActivities(
 
   if (sessionsError) {
     console.warn('getFriendActivities sessions error:', sessionsError);
-    return [];
   }
 
-  // Map sessions to friend activities
+  // Map to activities
   const activities: FriendActivity[] = [];
-  const sessionMap = new Map<string, typeof sessions[0]>();
-  
-  // Get most recent session per friend
-  for (const session of sessions ?? []) {
-    if (!sessionMap.has(session.user_id)) {
-      sessionMap.set(session.user_id, session);
+  const activeMap = new Map<string, typeof activeSessions[0]>();
+  const completedMap = new Map<string, typeof completedSessions[0]>();
+
+  // Build maps
+  for (const active of activeSessions ?? []) {
+    activeMap.set(active.user_id, active);
+  }
+  for (const completed of completedSessions ?? []) {
+    if (!completedMap.has(completed.user_id)) {
+      completedMap.set(completed.user_id, completed);
     }
   }
 
   for (const profile of profiles) {
-    const session = sessionMap.get(profile.id);
-    const lastSeen = session?.completed_at 
-      ? new Date(session.completed_at).toISOString()
-      : undefined;
-    
-    // If no session, show as idle
-    if (!session) {
+    const active = activeMap.get(profile.id);
+    const completed = completedMap.get(profile.id);
+
+    if (active) {
+      // Friend has active session
+      activities.push({
+        id: profile.id,
+        name: profile.name,
+        status: active.status === 'running' ? 'flow' : 'idle',
+        activity: active.task_title || '',
+        timeRemaining: active.time_remaining_seconds,
+        totalDuration: active.duration_minutes * 60,
+        lastSeen: active.updated_at ? new Date(active.updated_at).toISOString() : undefined,
+      });
+    } else if (completed) {
+      // Friend has completed session but no active one
+      const completedAt = new Date(completed.completed_at);
+      const minutesSinceCompletion = Math.floor((Date.now() - completedAt.getTime()) / (1000 * 60));
+      
+      activities.push({
+        id: profile.id,
+        name: profile.name,
+        status: 'idle',
+        activity: completed.task_title || '',
+        timeRemaining: 0,
+        totalDuration: completed.duration_minutes * 60,
+        lastSeen: completedAt.toISOString(),
+      });
+    } else {
+      // No activity at all
       activities.push({
         id: profile.id,
         name: profile.name,
@@ -61,34 +97,15 @@ export async function getFriendActivities(
         activity: '',
         timeRemaining: 0,
         totalDuration: 0,
-        lastSeen,
+        lastSeen: undefined,
       });
-      continue;
     }
-
-    // Calculate time since completion
-    const completedAt = new Date(session.completed_at);
-    const minutesSinceCompletion = Math.floor((Date.now() - completedAt.getTime()) / (1000 * 60));
-    
-    // If completed within last 5 minutes, show as "flow" (recently active)
-    // Otherwise show as "idle"
-    const status = minutesSinceCompletion < 5 ? 'flow' : 'idle';
-    const totalDuration = session.duration_minutes * 60;
-    const timeRemaining = status === 'flow' ? Math.max(0, totalDuration - (minutesSinceCompletion * 60)) : 0;
-
-    activities.push({
-      id: profile.id,
-      name: profile.name,
-      status,
-      activity: session.task_title || '',
-      timeRemaining,
-      totalDuration,
-      lastSeen,
-    });
   }
 
-  // Sort by last seen (most recent first)
+  // Sort: active first, then by last seen
   activities.sort((a, b) => {
+    if (a.status === 'flow' && b.status !== 'flow') return -1;
+    if (a.status !== 'flow' && b.status === 'flow') return 1;
     if (!a.lastSeen) return 1;
     if (!b.lastSeen) return -1;
     return new Date(b.lastSeen).getTime() - new Date(a.lastSeen).getTime();

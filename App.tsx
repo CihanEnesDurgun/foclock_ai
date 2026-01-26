@@ -178,13 +178,44 @@ const App: React.FC = () => {
   useEffect(() => {
     if (status === TimerStatus.RUNNING && timeLeft > 0) {
       timerRef.current = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
+      // Update active session every second when running
+      if (user && currentTask && user.id !== DEMO_USER_ID) {
+        // Initialize active session immediately when timer starts
+        const durationMins = Math.floor(sessionDuration / 60);
+        authService.updateActiveSession(
+          user.id,
+          currentTask,
+          durationMins,
+          timeLeft,
+          'running'
+        );
+        
+        const updateInterval = setInterval(async () => {
+          const durationMins = Math.floor(sessionDuration / 60);
+          await authService.updateActiveSession(
+            user.id,
+            currentTask,
+            durationMins,
+            timeLeft,
+            'running'
+          );
+        }, 1000);
+        return () => {
+          clearInterval(timerRef.current!);
+          clearInterval(updateInterval);
+        };
+      }
     } else if (timeLeft === 0 && status === TimerStatus.RUNNING) {
       handleComplete();
     } else {
       if (timerRef.current) clearInterval(timerRef.current);
+      // Clear active session when stopped/paused/reset
+      if (user && user.id !== DEMO_USER_ID && (status === TimerStatus.IDLE || status === TimerStatus.PAUSED || status === TimerStatus.COMPLETED)) {
+        authService.clearActiveSession(user.id);
+      }
     }
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [status, timeLeft]);
+  }, [status, timeLeft, user, currentTask, sessionDuration]);
 
   const handleComplete = async () => {
     setStatus(TimerStatus.COMPLETED);
@@ -196,6 +227,7 @@ const App: React.FC = () => {
 
       if (!isDemo) {
         await authService.saveCompletedSession(user.id, currentTask, durationMins);
+        // saveCompletedSession already clears active_sessions
         const newStats = await authService.getStats(user.id);
         setStats(newStats);
       } else {
