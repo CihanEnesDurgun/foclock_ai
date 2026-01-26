@@ -408,7 +408,7 @@ const App: React.FC = () => {
     return (
       <div className="h-screen w-screen bg-black flex flex-col items-center justify-center">
         <div className="w-20 h-20 border-t-2 border-white rounded-full animate-spin"></div>
-        <h1 className="mt-8 text-white font-black tracking-widest uppercase text-[10px] animate-pulse">Neural Link v1.1 Beta</h1>
+        <h1 className="mt-8 text-white font-black tracking-widest uppercase text-[10px] animate-pulse">Neural Link v1.4 Beta</h1>
       </div>
     );
   }
@@ -418,7 +418,7 @@ const App: React.FC = () => {
       tr: {
         title: 'FoClock AI',
         subtitle: 'Nöral Odak Motoru',
-        beta: 'Beta v1.1',
+        beta: 'Beta v1.4',
         betaMessage: '🎯 Özel erişim: Bu beta sürümünü test eden seçili kullanıcılardan birisiniz. Sizin deneyiminiz ve geri bildirimleriniz FoClock AI\'nın geleceğini şekillendiriyor.',
         feature1Title: 'AI Destekli Planlama',
         feature1Desc: 'Fufit AI ile görevlerinizi bilimsel temellere dayalı olarak planlayın ve optimize edin.',
@@ -433,7 +433,7 @@ const App: React.FC = () => {
       en: {
         title: 'FoClock AI',
         subtitle: 'Neural Focus Engine',
-        beta: 'Beta v1.1',
+        beta: 'Beta v1.4',
         betaMessage: '🎯 Exclusive Access: You\'re among the select few testing this beta version. Your experience and feedback are shaping the future of FoClock AI.',
         feature1Title: 'AI-Powered Planning',
         feature1Desc: 'Plan and optimize your tasks based on scientific principles with Fufit AI.',
@@ -735,7 +735,7 @@ const App: React.FC = () => {
       </aside>
 
       <main className="main-focus">
-        <div className="watermark">FUFIT NEURAL ENGINE v1.1.b</div>
+        <div className="watermark">FUFIT NEURAL ENGINE v1.4.0</div>
         <div className="absolute left-1/2 top-[68px] z-10 -translate-x-1/2 text-[11px] font-black uppercase tracking-[0.5em] text-[var(--text-bright)] drop-shadow-sm">{currentTask || "SİSTEM HAZIR"}</div>
         <div className="flex flex-1 flex-col items-center justify-center">
             <div className="timer-container">
@@ -1008,7 +1008,7 @@ const App: React.FC = () => {
                     </button>
                   </div>
                   <div className="pt-6 border-t border-[var(--border)]">
-                     <span className="text-[8px] font-bold text-[var(--text-dim)] uppercase tracking-widest">Sürüm: FoClock AI Neural Beta 1.1</span>
+                     <span className="text-[8px] font-bold text-[var(--text-dim)] uppercase tracking-widest">Sürüm: FoClock AI Neural Beta 1.4</span>
                   </div>
                 </div>
                 <button className="w-full mt-10 py-4 bg-[var(--accent)] text-[var(--accent-text)] rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg" onClick={() => setSidebarModule('default')}>Tercihleri Uygula</button>
