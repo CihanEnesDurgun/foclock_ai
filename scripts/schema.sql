@@ -96,3 +96,22 @@ END;
 $$;
 GRANT EXECUTE ON FUNCTION create_user_profile(uuid, text, text, text, text, text, jsonb, jsonb) TO anon;
 GRANT EXECUTE ON FUNCTION create_user_profile(uuid, text, text, text, text, text, jsonb, jsonb) TO authenticated;
+
+-- 9. RPC: Arkadaşları getir (SECURITY DEFINER, RLS bypass)
+CREATE OR REPLACE FUNCTION get_friends()
+RETURNS TABLE(id uuid, username text, name text) LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
+  WITH friend_ids AS (
+    SELECT DISTINCT CASE 
+      WHEN from_user_id = auth.uid() THEN to_user_id
+      WHEN to_user_id = auth.uid() THEN from_user_id
+    END AS friend_id
+    FROM friend_requests
+    WHERE status = 'accepted' AND (from_user_id = auth.uid() OR to_user_id = auth.uid())
+  )
+  SELECT p.id, p.username, p.name
+  FROM profiles p
+  INNER JOIN friend_ids f ON p.id = f.friend_id
+  WHERE p.id IS NOT NULL
+  ORDER BY p.name;
+$$;
+GRANT EXECUTE ON FUNCTION get_friends() TO authenticated;

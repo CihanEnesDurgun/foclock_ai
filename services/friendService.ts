@@ -129,22 +129,32 @@ export interface Friend {
 }
 
 export async function getFriends(userId: string): Promise<Friend[]> {
-  const friendIds = await getFriendIds(userId);
-  if (friendIds.length === 0) return [];
-
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('id, username, name')
-    .in('id', friendIds);
+  // Use RPC to bypass RLS (profiles table only allows reading own profile)
+  const { data, error } = await supabase.rpc('get_friends');
 
   if (error) {
-    console.warn('getFriends', error);
-    return [];
+    console.warn('getFriends RPC error:', error);
+    // Fallback: try direct query (will fail if RLS blocks, but logs the error)
+    const friendIds = await getFriendIds(userId);
+    if (friendIds.length === 0) return [];
+    const { data: fallbackData, error: fallbackError } = await supabase
+      .from('profiles')
+      .select('id, username, name')
+      .in('id', friendIds);
+    if (fallbackError) {
+      console.warn('getFriends fallback error:', fallbackError);
+      return [];
+    }
+    return (fallbackData ?? []).map((p: { id: string; username: string | null; name: string }) => ({
+      id: p.id,
+      username: p.username,
+      name: p.name,
+    }));
   }
 
-  return (data ?? []).map((p: { id: string; username: string | null; name: string }) => ({
-    id: p.id,
-    username: p.username,
-    name: p.name,
+  return (data ?? []).map((r: { id: string; username: string | null; name: string }) => ({
+    id: r.id,
+    username: r.username,
+    name: r.name,
   }));
 }
