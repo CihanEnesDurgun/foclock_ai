@@ -115,3 +115,29 @@ RETURNS TABLE(id uuid, username text, name text) LANGUAGE sql SECURITY DEFINER S
   ORDER BY p.name;
 $$;
 GRANT EXECUTE ON FUNCTION get_friends() TO authenticated;
+
+-- 10. Active sessions tablosu (arkadaşların aktif oturumlarını takip için)
+CREATE TABLE IF NOT EXISTS active_sessions (
+  user_id uuid PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,
+  task_title text NOT NULL,
+  started_at timestamptz DEFAULT now(),
+  duration_minutes integer NOT NULL,
+  time_remaining_seconds integer NOT NULL,
+  status text NOT NULL DEFAULT 'running' CHECK (status IN ('running', 'paused')),
+  updated_at timestamptz DEFAULT now()
+);
+ALTER TABLE active_sessions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can manage own active session" ON active_sessions;
+CREATE POLICY "Users can manage own active session" ON active_sessions
+  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can read friends' active sessions" ON active_sessions;
+CREATE POLICY "Users can read friends' active sessions" ON active_sessions
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM friend_requests fr
+      WHERE fr.status = 'accepted'
+      AND ((fr.from_user_id = auth.uid() AND fr.to_user_id = active_sessions.user_id)
+        OR (fr.to_user_id = auth.uid() AND fr.from_user_id = active_sessions.user_id))
+    )
+  );
+CREATE INDEX IF NOT EXISTS idx_active_sessions_updated_at ON active_sessions(updated_at);
