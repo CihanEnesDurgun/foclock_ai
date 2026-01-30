@@ -34,11 +34,15 @@ export async function createRoom(
 
   if (roomError) return { success: false, error: roomError.message };
 
-  await supabase.from('room_members').insert({
+  const { error: memberError } = await supabase.from('room_members').insert({
     room_id: roomData.id,
     user_id: hostId,
     role: 'host',
   });
+  if (memberError) {
+    await supabase.from('rooms').delete().eq('id', roomData.id);
+    return { success: false, error: memberError.message };
+  }
 
   const room: Room = {
     id: roomData.id,
