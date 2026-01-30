@@ -194,10 +194,13 @@ const App: React.FC = () => {
       .finally(() => setLoadingFriendsList(false));
   }, [sidebarModule, user?.id, user?.friends?.length]);
 
-  // Birlikte Çalış: paired durumunu yükle
+  // Birlikte Çalış: paired durumunu yükle ve periyodik güncelle (davet kabul edildiğinde widget için)
   useEffect(() => {
     if (!user || user.id === DEMO_USER_ID) return;
-    getPairedFriendId(user.id).then((id) => setPairedWithUserId(id));
+    const poll = () => getPairedFriendId(user.id).then((id) => setPairedWithUserId(id));
+    poll();
+    const id = setInterval(poll, 2000);
+    return () => clearInterval(id);
   }, [user?.id]);
 
   // Birlikte Çalış: bekleyen davetleri yükle
