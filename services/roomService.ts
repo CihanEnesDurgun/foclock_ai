@@ -119,7 +119,7 @@ export async function getRoom(userId: string, roomId: string): Promise<Room | nu
     .select('user_id')
     .eq('room_id', roomId)
     .eq('user_id', userId)
-    .single();
+    .maybeSingle();
   if (isMember.error || !isMember.data) return null;
 
   const { data: membersData } = await supabase.rpc('get_room_members_with_profiles', {
@@ -137,7 +137,7 @@ export async function getRoom(userId: string, roomId: string): Promise<Room | nu
     .from('room_sessions')
     .select('task_title, duration_minutes, time_remaining_seconds, status, started_at, updated_at')
     .eq('room_id', roomId)
-    .single();
+    .maybeSingle();
 
   let activeSession: RoomSessionState | undefined;
   if (sessionData) {
@@ -247,7 +247,7 @@ export async function completeRoomSession(roomId: string, hostId: string): Promi
     .from('room_sessions')
     .select('task_title, duration_minutes')
     .eq('room_id', roomId)
-    .single();
+    .maybeSingle();
 
   if (session) {
     const { data: members } = await supabase.from('room_members').select('user_id').eq('room_id', roomId);
