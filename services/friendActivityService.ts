@@ -25,7 +25,7 @@ export async function getFriendActivities(
   // Get active sessions for friends
   const { data: activeSessions, error: activeError } = await supabase
     .from('active_sessions')
-    .select('user_id, task_title, duration_minutes, time_remaining_seconds, status, updated_at')
+    .select('user_id, task_title, duration_minutes, time_remaining_seconds, status, updated_at, paired_with_user_id')
     .in('user_id', friendIds)
     .eq('status', 'running');
 
@@ -73,6 +73,7 @@ export async function getFriendActivities(
         timeRemaining: active.time_remaining_seconds,
         totalDuration: active.duration_minutes * 60,
         lastSeen: active.updated_at ? new Date(active.updated_at).toISOString() : undefined,
+        pairedWith: active.paired_with_user_id ?? undefined,
       });
     } else if (completed) {
       // Friend has completed session but no active one
