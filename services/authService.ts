@@ -180,7 +180,8 @@ export const authService = {
     taskTitle: string,
     durationMinutes: number,
     timeRemainingSeconds: number,
-    status: 'running' | 'paused'
+    status: 'running' | 'paused',
+    pairedWithUserId?: string
   ) => {
     await supabase.from('active_sessions').upsert({
       user_id: userId,
@@ -188,6 +189,7 @@ export const authService = {
       duration_minutes: durationMinutes,
       time_remaining_seconds: timeRemainingSeconds,
       status,
+      paired_with_user_id: pairedWithUserId ?? null,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id' });
   },

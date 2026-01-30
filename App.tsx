@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { TimerStatus, PomodoroSession, PlannedTask, TimerMode, ChatMessage, User, FriendActivity, FriendRequest } from './types';
+import { TimerStatus, PomodoroSession, PlannedTask, TimerMode, ChatMessage, User, FriendActivity, FriendRequest, Room } from './types';
 import { suggestPlan, finalizeTasks, getMotivation, summarizeSession, formatMessage } from './services/geminiService';
 import { authService } from './services/authService';
 import { getFriendActivities } from './services/friendActivityService';
@@ -17,6 +17,18 @@ import {
   type SearchUser,
   type Friend,
 } from './services/friendService';
+import { startPairWith, endPairWith, getPairedFriendId } from './services/pairService';
+import {
+  createRoom,
+  joinRoomByCode,
+  getMyRooms,
+  getRoom,
+  leaveRoom,
+  inviteFriendToRoom,
+  startRoomSession,
+  updateRoomSession,
+  completeRoomSession,
+} from './services/roomService';
 import { locales } from './locales';
 import { getQuote, quoteCount, ROTATION_INTERVAL_MS } from './quotes';
 import { VERSION } from './version';
@@ -43,7 +55,7 @@ const App: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   
-  const [sidebarModule, setSidebarModule] = useState<'default' | 'analytics' | 'settings' | 'social' | 'account'>('default');
+  const [sidebarModule, setSidebarModule] = useState<'default' | 'analytics' | 'settings' | 'social' | 'account' | 'rooms'>('default');
   const [lang, setLang] = useState<'tr' | 'en'>('tr');
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [testMode, setTestMode] = useState(false); // 1 dakika = 1 saniye
@@ -73,6 +85,18 @@ const App: React.FC = () => {
   const [addingUserId, setAddingUserId] = useState<string | null>(null);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [loadingFriendsList, setLoadingFriendsList] = useState(false);
+  const [pairedWithUserId, setPairedWithUserId] = useState<string | null>(null);
+  const [myRooms, setMyRooms] = useState<Room[]>([]);
+  const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
+  const [loadingRooms, setLoadingRooms] = useState(false);
+  const [roomJoinCode, setRoomJoinCode] = useState('');
+  const [roomCreateTitle, setRoomCreateTitle] = useState('');
+  const [roomCreateDuration, setRoomCreateDuration] = useState(25);
+  const [roomTaskTitle, setRoomTaskTitle] = useState('');
+  const [roomSessionTimeLeft, setRoomSessionTimeLeft] = useState(0);
+  const [roomSessionDuration, setRoomSessionDuration] = useState(0);
+  const [roomCodeCopied, setRoomCodeCopied] = useState(false);
+  const roomTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -167,6 +191,64 @@ const App: React.FC = () => {
       .finally(() => setLoadingFriendsList(false));
   }, [sidebarModule, user?.id, user?.friends?.length]);
 
+  // Birlikte Çalış: paired durumunu yükle
+  useEffect(() => {
+    if (!user || user.id === DEMO_USER_ID) return;
+    getPairedFriendId(user.id).then((id) => setPairedWithUserId(id));
+  }, [user?.id]);
+
+  // Odalar: myRooms yükle
+  useEffect(() => {
+    if (sidebarModule !== 'rooms' || !user || user.id === DEMO_USER_ID) return;
+    setLoadingRooms(true);
+    getMyRooms(user.id).then(setMyRooms).finally(() => setLoadingRooms(false));
+  }, [sidebarModule, user?.id]);
+
+  // Odalar: host için room timer tick (active session varsa)
+  useEffect(() => {
+    if (!currentRoom || !user || user.id === DEMO_USER_ID) return;
+    const isHost = currentRoom.hostId === user.id;
+    if (!isHost || !currentRoom.activeSession) return;
+    const roomId = currentRoom.id;
+    const userId = user.id;
+    const id = setInterval(() => {
+      setRoomSessionTimeLeft((prev) => {
+        const next = prev - 1;
+        if (next <= 0) {
+          playAlert();
+          completeRoomSession(roomId, userId).then(() => {
+            setRoomSessionTimeLeft(0);
+            getRoom(userId, roomId).then(setCurrentRoom);
+            authService.getStats(userId).then(setStats);
+          });
+          return 0;
+        }
+        updateRoomSession(roomId, userId, next, 'running');
+        return next;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [currentRoom?.id, currentRoom?.hostId, user?.id, !!currentRoom?.activeSession]);
+
+  // Odalar: currentRoom poll (members için veya room güncellemesi)
+  useEffect(() => {
+    if (!currentRoom || !user || user.id === DEMO_USER_ID) return;
+    const isHost = currentRoom.hostId === user.id;
+    if (currentRoom.activeSession && roomSessionTimeLeft === 0) {
+      setRoomSessionTimeLeft(currentRoom.activeSession.timeRemainingSeconds);
+      setRoomSessionDuration(currentRoom.activeSession.durationMinutes * 60);
+    }
+    const poll = () => getRoom(user.id, currentRoom.id).then((r) => {
+      if (r) setCurrentRoom(r);
+      if (r?.activeSession && !isHost) {
+        setRoomSessionTimeLeft(r.activeSession.timeRemainingSeconds);
+        setRoomSessionDuration(r.activeSession.durationMinutes * 60);
+      }
+    });
+    const id = setInterval(poll, 1000);
+    return () => clearInterval(id);
+  }, [currentRoom?.id, user?.id]);
+
   // Kullanıcı adı kullanılabilirlik (kayıt formu, debounce)
   useEffect(() => {
     if (view !== 'auth' || !registerUsername.trim()) {
@@ -197,13 +279,14 @@ const App: React.FC = () => {
           // Update active session with current time remaining
           if (user && currentTask && user.id !== DEMO_USER_ID) {
             const durationMins = Math.floor(sessionDuration / 60);
-            authService.updateActiveSession(
-              user.id,
-              currentTask,
-              durationMins,
-              newTime,
-              'running'
-            );
+          authService.updateActiveSession(
+            user.id,
+            currentTask,
+            durationMins,
+            newTime,
+            'running',
+            pairedWithUserId ?? undefined
+          );
           }
           return newTime;
         });
@@ -217,7 +300,8 @@ const App: React.FC = () => {
           currentTask,
           durationMins,
           timeLeft,
-          'running'
+          'running',
+          pairedWithUserId ?? undefined
         );
       }
     } else if (timeLeft === 0 && status === TimerStatus.RUNNING) {
@@ -368,6 +452,84 @@ const App: React.FC = () => {
     if (!user || user.id === DEMO_USER_ID) return;
     const { success } = await rejectFriendRequest(requestId, user.id);
     if (success) setIncomingRequests((prev) => prev.filter((r) => r.id !== requestId));
+  };
+
+  const handleWorkTogether = async (friendId: string) => {
+    if (!user || user.id === DEMO_USER_ID) return;
+    const { success } = await startPairWith(user.id, friendId);
+    if (success) {
+      setPairedWithUserId(friendId);
+      setCurrentTask(lang === 'tr' ? 'Birlikte Çalışma' : 'Co-working');
+      setTimeLeft(25 * 60);
+      setSessionDuration(25 * 60);
+      setStatus(TimerStatus.IDLE);
+    }
+  };
+
+  const handleEndPair = async () => {
+    if (!user || user.id === DEMO_USER_ID || !pairedWithUserId) return;
+    await endPairWith(user.id, pairedWithUserId);
+    setPairedWithUserId(null);
+    authService.clearActiveSession(user.id);
+  };
+
+  const handleCreateRoom = async () => {
+    if (!user || user.id === DEMO_USER_ID) return;
+    const { success, room, error } = await createRoom(user.id, roomCreateTitle, roomCreateDuration);
+    if (success && room) {
+      setMyRooms((prev) => [room, ...prev]);
+      setCurrentRoom(room);
+      setRoomCreateTitle('');
+      setRoomCreateDuration(25);
+    }
+  };
+
+  const handleJoinRoom = async () => {
+    if (!user || user.id === DEMO_USER_ID) return;
+    const { success, room, error } = await joinRoomByCode(user.id, roomJoinCode);
+    if (success && room) {
+      setMyRooms((prev) => [room, ...prev.filter((r) => r.id !== room.id)]);
+      setCurrentRoom(room);
+      setRoomJoinCode('');
+    }
+  };
+
+  const handleLeaveRoom = async () => {
+    if (!user || user.id === DEMO_USER_ID || !currentRoom) return;
+    await leaveRoom(user.id, currentRoom.id);
+    setMyRooms((prev) => prev.filter((r) => r.id !== currentRoom.id));
+    setCurrentRoom(null);
+  };
+
+  const handleInviteFriend = async (friendId: string) => {
+    if (!user || user.id === DEMO_USER_ID || !currentRoom) return;
+    await inviteFriendToRoom(currentRoom.id, user.id, friendId);
+    const updated = await getRoom(user.id, currentRoom.id);
+    if (updated) setCurrentRoom(updated);
+  };
+
+  const handleStartRoomSession = async () => {
+    if (!user || user.id === DEMO_USER_ID || !currentRoom || currentRoom.hostId !== user.id) return;
+    const task = roomTaskTitle.trim() || (lang === 'tr' ? 'Ortak Görev' : 'Shared Task');
+    const { success } = await startRoomSession(currentRoom.id, user.id, task, currentRoom.durationMinutes);
+    if (success) {
+      const secs = currentRoom.durationMinutes * 60;
+      setRoomSessionTimeLeft(secs);
+      setRoomSessionDuration(secs);
+      setRoomTaskTitle('');
+      const updated = await getRoom(user.id, currentRoom.id);
+      if (updated) setCurrentRoom(updated);
+    }
+  };
+
+  const handleCompleteRoomSession = async () => {
+    if (!user || user.id === DEMO_USER_ID || !currentRoom || currentRoom.hostId !== user.id) return;
+    await completeRoomSession(currentRoom.id, user.id);
+    setRoomSessionTimeLeft(0);
+    const updated = await getRoom(user.id, currentRoom.id);
+    if (updated) setCurrentRoom(updated);
+    const newStats = await authService.getStats(user.id);
+    setStats(newStats);
   };
 
   const handleChat = async () => {
@@ -806,6 +968,12 @@ const App: React.FC = () => {
                 <div className="flex items-center justify-between mb-8">
                   <h4 className="text-[11px] font-black text-[var(--text-dim)] uppercase tracking-widest">{t.social}</h4>
                 </div>
+                {pairedWithUserId && user?.id !== DEMO_USER_ID && (
+                  <div className="mb-6 p-3 border border-[var(--status-flow)] rounded-xl bg-[var(--status-flow)]/10">
+                    <p className="text-[10px] font-bold text-[var(--status-flow)] mb-2">{t.workingWith} {friends.find(f => f.id === pairedWithUserId)?.name ?? ''}</p>
+                    <button onClick={handleEndPair} className="w-full py-2 rounded-lg border border-[var(--border)] text-[9px] font-black uppercase hover:bg-white/5 transition-all">{t.endPair}</button>
+                  </div>
+                )}
                 {loadingFriends ? (
                   <div className="py-20 text-center">
                     <p className="text-[10px] italic opacity-40 uppercase tracking-widest">{t.loading}</p>
@@ -836,6 +1004,8 @@ const App: React.FC = () => {
                         }
                       }
                       
+                      const isPairedWithMe = fa.pairedWith === user?.id;
+                      const canWorkTogether = isActive && !isPairedWithMe && user?.id !== DEMO_USER_ID;
                       return (
                         <div key={fa.id} className="p-2.5 border border-[var(--border)] rounded-xl bg-white/5 relative">
                           <div className="flex items-center gap-2.5">
@@ -860,6 +1030,9 @@ const App: React.FC = () => {
                                   {isActive ? `${elapsed}m` : totalMins > 0 ? `${totalMins}m` : ''}
                                 </span>
                               </div>
+                              {isPairedWithMe && (
+                                <div className="text-[8px] text-[var(--status-flow)] font-bold mb-1">{t.workingWith} {fa.name}</div>
+                              )}
                               <div className="text-[9px] text-[var(--text-dim)] truncate mb-1.5">{fa.activity || (lang === 'tr' ? 'Boş' : 'Empty')}</div>
                               {isActive && fa.totalDuration > 0 && (
                                 <div className="h-0.5 bg-[var(--border)] rounded-full overflow-hidden">
@@ -872,6 +1045,11 @@ const App: React.FC = () => {
                               {timeAgo && !isActive && (
                                 <div className="text-[8px] text-[var(--text-dim)] mt-1">{timeAgo}</div>
                               )}
+                              {canWorkTogether && (
+                                <button onClick={() => handleWorkTogether(fa.id)} className="mt-2 w-full py-1.5 rounded-lg bg-[var(--status-flow)]/20 border border-[var(--status-flow)] text-[var(--status-flow)] text-[9px] font-black uppercase hover:bg-[var(--status-flow)]/30 transition-all">
+                                  {t.workTogether}
+                                </button>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -880,6 +1058,111 @@ const App: React.FC = () => {
                   </div>
                 )}
                 <button className="w-full mt-8 py-4 border border-[var(--border)] rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/5 transition-all" onClick={() => setSidebarModule('default')}>{t.back}</button>
+              </div>
+            ) : sidebarModule === 'rooms' ? (
+              <div className="animate-fade">
+                <div className="flex items-center justify-between mb-6">
+                  <h4 className="text-[11px] font-black text-[var(--text-dim)] uppercase tracking-widest">{t.rooms}</h4>
+                </div>
+                {user?.id === DEMO_USER_ID ? (
+                  <div className="py-12 text-center">
+                    <p className="text-[10px] italic opacity-40 uppercase tracking-widest">{t.noRooms}</p>
+                    <p className="text-[9px] text-[var(--text-dim)] mt-4 opacity-60">{lang === 'tr' ? 'Giriş yaparak oda oluşturabilir veya katılabilirsiniz.' : 'Sign in to create or join rooms.'}</p>
+                    <button className="w-full mt-8 py-4 border border-[var(--border)] rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/5 transition-all" onClick={() => setSidebarModule('default')}>{t.back}</button>
+                  </div>
+                ) : !currentRoom ? (
+                  <>
+                    <div className="space-y-4 mb-6">
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-[var(--text-dim)] mb-1">{t.roomTitle}</label>
+                        <input value={roomCreateTitle} onChange={(e) => setRoomCreateTitle(e.target.value)} placeholder={t.roomTitlePlaceholder} className="w-full bg-white/5 border border-[var(--border)] rounded-xl px-4 py-2.5 text-[10px] outline-none focus:border-[var(--text-bright)]" />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-[var(--text-dim)] mb-1">{t.roomDuration}</label>
+                        <input type="number" min={5} max={90} value={roomCreateDuration} onChange={(e) => setRoomCreateDuration(parseInt(e.target.value) || 25)} className="w-full bg-white/5 border border-[var(--border)] rounded-xl px-4 py-2.5 text-[10px] outline-none focus:border-[var(--text-bright)]" />
+                      </div>
+                      <button onClick={handleCreateRoom} className="w-full py-3 rounded-xl bg-[var(--accent)] text-[var(--accent-text)] text-[10px] font-black uppercase">{t.createRoom}</button>
+                    </div>
+                    <div className="border-t border-[var(--border)] pt-6 mb-6">
+                      <label className="block text-[10px] font-bold uppercase text-[var(--text-dim)] mb-2">{t.joinRoom}</label>
+                      <div className="flex gap-2">
+                        <input value={roomJoinCode} onChange={(e) => setRoomJoinCode(e.target.value.toUpperCase())} placeholder={t.roomCodePlaceholder} maxLength={6} className="flex-1 bg-white/5 border border-[var(--border)] rounded-xl px-4 py-2.5 text-[10px] uppercase outline-none focus:border-[var(--text-bright)]" />
+                        <button onClick={handleJoinRoom} disabled={roomJoinCode.trim().length < 4} className="px-4 py-2.5 rounded-xl bg-[var(--accent)] text-[var(--accent-text)] text-[10px] font-black uppercase disabled:opacity-40">{t.joinRoom}</button>
+                      </div>
+                    </div>
+                    <div className="space-y-2 mb-6">
+                      <p className="text-[10px] font-bold text-[var(--text-dim)] uppercase">{t.myRooms}</p>
+                      {loadingRooms ? <p className="text-[9px] italic">{t.loading}</p> : myRooms.length === 0 ? <p className="text-[9px] text-[var(--text-dim)]">{t.noRooms}</p> : myRooms.map((r) => (
+                        <div key={r.id} className="p-3 border border-[var(--border)] rounded-xl flex justify-between items-center bg-white/5">
+                          <div>
+                            <div className="text-[10px] font-black truncate">{r.title}</div>
+                            <div className="text-[9px] text-[var(--text-dim)]">{r.roomCode} · {r.members?.length ?? 0}/{r.maxMembers}</div>
+                          </div>
+                          <button onClick={() => setCurrentRoom(r)} className="px-3 py-1.5 rounded-lg border border-[var(--border)] text-[9px] font-bold hover:bg-white/5">{lang === 'tr' ? 'Aç' : 'Open'}</button>
+                        </div>
+                      ))}
+                    </div>
+                    <button className="w-full py-4 border border-[var(--border)] rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/5 transition-all" onClick={() => setSidebarModule('default')}>{t.back}</button>
+                  </>
+                ) : (
+                  <div>
+                    <div className="p-4 border border-[var(--border)] rounded-xl bg-white/5 mb-4">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <div className="text-[11px] font-black uppercase">{currentRoom.title}</div>
+                          <div className="text-[9px] text-[var(--text-dim)] mt-1">{currentRoom.roomCode}</div>
+                        </div>
+                        <button onClick={() => { navigator.clipboard.writeText(currentRoom.roomCode); setRoomCodeCopied(true); setTimeout(() => setRoomCodeCopied(false), 2000); }} className="px-2 py-1 rounded text-[9px] font-bold border border-[var(--border)] hover:bg-white/5">{roomCodeCopied ? t.codeCopied : t.copyCode}</button>
+                      </div>
+                      <div className="text-[9px] text-[var(--text-dim)]">{currentRoom.members?.length ?? 0}/{currentRoom.maxMembers} {lang === 'tr' ? 'üye' : 'members'}</div>
+                    </div>
+                    {currentRoom.hostId === user?.id && currentRoom.activeSession ? (
+                      <div className="p-4 border border-[var(--status-flow)] rounded-xl bg-[var(--status-flow)]/10 mb-4">
+                        <div className="text-[10px] font-black text-[var(--status-flow)] mb-2">{currentRoom.activeSession.taskTitle}</div>
+                        <div className="text-2xl font-black tabular-nums">{Math.floor(roomSessionTimeLeft / 60)}:{(roomSessionTimeLeft % 60).toString().padStart(2, '0')}</div>
+                      </div>
+                    ) : currentRoom.activeSession ? (
+                      <div className="p-4 border border-[var(--status-flow)] rounded-xl bg-[var(--status-flow)]/10 mb-4">
+                        <div className="text-[10px] font-black text-[var(--status-flow)] mb-2">{currentRoom.activeSession.taskTitle}</div>
+                        <div className="text-2xl font-black tabular-nums">{Math.floor((currentRoom.activeSession.timeRemainingSeconds) / 60)}:{(currentRoom.activeSession.timeRemainingSeconds % 60).toString().padStart(2, '0')}</div>
+                      </div>
+                    ) : currentRoom.hostId === user?.id ? (
+                      <div className="mb-4">
+                        <input value={roomTaskTitle} onChange={(e) => setRoomTaskTitle(e.target.value)} placeholder={t.roomTaskPlaceholder} className="w-full mb-2 bg-white/5 border border-[var(--border)] rounded-xl px-4 py-2.5 text-[10px] outline-none focus:border-[var(--text-bright)]" />
+                        <button onClick={handleStartRoomSession} className="w-full py-3 rounded-xl bg-[var(--status-flow)] text-white text-[10px] font-black uppercase">{t.startSession}</button>
+                      </div>
+                    ) : null}
+                    <div className="mb-4">
+                      <p className="text-[10px] font-bold text-[var(--text-dim)] uppercase mb-2">{t.inviteFriends}</p>
+                      {friends.filter((f) => !currentRoom.members?.some((m) => m.userId === f.id)).length === 0 ? (
+                        <p className="text-[9px] text-[var(--text-dim)]">{lang === 'tr' ? 'Davet edilebilecek arkadaş yok.' : 'No friends to invite.'}</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {friends.filter((f) => !currentRoom.members?.some((m) => m.userId === f.id)).slice(0, 5).map((f) => (
+                            <div key={f.id} className="flex justify-between items-center p-2 border border-[var(--border)] rounded-lg bg-white/5">
+                              <span className="text-[10px] font-bold truncate">{f.name}</span>
+                              <button onClick={() => handleInviteFriend(f.id)} className="px-2 py-1 rounded text-[9px] font-bold bg-[var(--accent)] text-[var(--accent-text)]">{t.invite}</button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="mb-4">
+                      <p className="text-[10px] font-bold text-[var(--text-dim)] uppercase mb-2">{lang === 'tr' ? 'Üyeler' : 'Members'}</p>
+                      <div className="space-y-2">
+                        {currentRoom.members?.map((m) => (
+                          <div key={m.userId} className="flex items-center gap-2 p-2 border border-[var(--border)] rounded-lg bg-white/5">
+                            <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-[9px] font-black">{m.name[0]}</div>
+                            <span className="text-[10px] font-bold truncate flex-1">{m.name}</span>
+                            {m.role === 'host' && <span className="text-[8px] text-[var(--accent)] font-bold">HOST</span>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <button onClick={handleLeaveRoom} className="w-full py-4 border border-red-500/50 rounded-2xl text-[10px] font-black uppercase text-red-500 hover:bg-red-500/10 transition-all">{t.leaveRoom}</button>
+                    <button className="w-full mt-4 py-4 border border-[var(--border)] rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/5 transition-all" onClick={() => setCurrentRoom(null)}>{t.back}</button>
+                  </div>
+                )}
               </div>
             ) : sidebarModule === 'account' ? (
               <div className="animate-fade">
@@ -1024,6 +1307,10 @@ const App: React.FC = () => {
                     <button className="btn-nav py-5 px-6 border border-[var(--border)] rounded-[1.5rem] hover:shadow-md" onClick={() => setSidebarModule('social')}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                       {t.social}
+                    </button>
+                    <button className={`btn-nav py-5 px-6 border rounded-[1.5rem] hover:shadow-md ${sidebarModule === 'rooms' ? 'border-[var(--accent)] bg-[var(--accent)]/10' : 'border-[var(--border)]'}`} onClick={() => setSidebarModule('rooms')}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                      {t.rooms}
                     </button>
                     <button className="btn-nav py-5 px-6 border border-[var(--border)] rounded-[1.5rem] hover:shadow-md" onClick={() => setSidebarModule('account')}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>

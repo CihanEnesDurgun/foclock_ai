@@ -74,4 +74,42 @@ export interface FriendActivity {
   timeRemaining: number;
   totalDuration: number;
   lastSeen?: string;
+  pairedWith?: string; // user id - birlikte çalışıyor
+}
+
+// Birlikte Çalış (2 kişi, herkes kendi timer'ı)
+export interface CoWorkPair {
+  userA: string;
+  userB: string;
+  startedAt: string;
+}
+
+// Oda (max 15 kişi, ortak timer)
+export interface Room {
+  id: string;
+  hostId: string;
+  title: string;
+  roomCode: string;
+  durationMinutes: number;
+  maxMembers: number;
+  createdAt: string;
+  members?: RoomMemberInfo[];
+  activeSession?: RoomSessionState;
+}
+
+export interface RoomMemberInfo {
+  userId: string;
+  name: string;
+  username: string | null;
+  role: 'host' | 'member';
+  joinedAt: string;
+}
+
+export interface RoomSessionState {
+  taskTitle: string;
+  durationMinutes: number;
+  timeRemainingSeconds: number;
+  status: 'running' | 'paused';
+  startedAt: string;
+  updatedAt: string;
 }
