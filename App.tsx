@@ -17,7 +17,7 @@ import {
   type SearchUser,
   type Friend,
 } from './services/friendService';
-import { startPairWith, endPairWith, getPairedFriendId } from './services/pairService';
+import { sendPairInvite, getPendingPairInvites, acceptPairInvite, rejectPairInvite, endPairWith, getPairedFriendId, type PairInvite } from './services/pairService';
 import {
   createRoom,
   joinRoomByCode,
@@ -86,6 +86,8 @@ const App: React.FC = () => {
   const [friends, setFriends] = useState<Friend[]>([]);
   const [loadingFriendsList, setLoadingFriendsList] = useState(false);
   const [pairedWithUserId, setPairedWithUserId] = useState<string | null>(null);
+  const [pairedFriendActivity, setPairedFriendActivity] = useState<FriendActivity | null>(null);
+  const [pendingPairInvites, setPendingPairInvites] = useState<PairInvite[]>([]);
   const [myRooms, setMyRooms] = useState<Room[]>([]);
   const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
   const [loadingRooms, setLoadingRooms] = useState(false);
@@ -196,6 +198,29 @@ const App: React.FC = () => {
     if (!user || user.id === DEMO_USER_ID) return;
     getPairedFriendId(user.id).then((id) => setPairedWithUserId(id));
   }, [user?.id]);
+
+  // Birlikte Çalış: bekleyen davetleri yükle
+  useEffect(() => {
+    if (!user || user.id === DEMO_USER_ID) return;
+    getPendingPairInvites(user.id).then(setPendingPairInvites);
+    const id = setInterval(() => getPendingPairInvites(user.id).then(setPendingPairInvites), 3000);
+    return () => clearInterval(id);
+  }, [user?.id]);
+
+  // Birlikte Çalış: eşleşmiş arkadaşın oturumunu yükle (widget için)
+  useEffect(() => {
+    if (!user || user.id === DEMO_USER_ID || !pairedWithUserId) {
+      setPairedFriendActivity(null);
+      return;
+    }
+    const poll = () => getFriendActivities(user.id, lang).then((activities) => {
+      const paired = activities.find((a) => a.id === pairedWithUserId);
+      setPairedFriendActivity(paired ?? null);
+    });
+    poll();
+    const id = setInterval(poll, 1000);
+    return () => clearInterval(id);
+  }, [user?.id, pairedWithUserId, lang]);
 
   // Odalar: myRooms yükle
   useEffect(() => {
@@ -454,16 +479,27 @@ const App: React.FC = () => {
     if (success) setIncomingRequests((prev) => prev.filter((r) => r.id !== requestId));
   };
 
-  const handleWorkTogether = async (friendId: string) => {
+  const handleWorkTogetherInvite = async (friendId: string) => {
     if (!user || user.id === DEMO_USER_ID) return;
-    const { success } = await startPairWith(user.id, friendId);
+    const { success } = await sendPairInvite(user.id, friendId);
     if (success) {
-      setPairedWithUserId(friendId);
-      setCurrentTask(lang === 'tr' ? 'Birlikte Çalışma' : 'Co-working');
-      setTimeLeft(25 * 60);
-      setSessionDuration(25 * 60);
-      setStatus(TimerStatus.IDLE);
+      // Davet gönderildi; karşı taraf kabul edene kadar bekleyecek
     }
+  };
+
+  const handleAcceptPairInvite = async (inviteId: string) => {
+    if (!user || user.id === DEMO_USER_ID) return;
+    const { success, fromUserId } = await acceptPairInvite(inviteId, user.id);
+    if (success) {
+      setPairedWithUserId(fromUserId ?? null);
+      setPendingPairInvites((prev) => prev.filter((i) => i.id !== inviteId));
+    }
+  };
+
+  const handleRejectPairInvite = async (inviteId: string) => {
+    if (!user || user.id === DEMO_USER_ID) return;
+    await rejectPairInvite(inviteId, user.id);
+    setPendingPairInvites((prev) => prev.filter((i) => i.id !== inviteId));
   };
 
   const handleEndPair = async () => {
@@ -968,6 +1004,20 @@ const App: React.FC = () => {
                 <div className="flex items-center justify-between mb-8">
                   <h4 className="text-[11px] font-black text-[var(--text-dim)] uppercase tracking-widest">{t.social}</h4>
                 </div>
+                {pendingPairInvites.length > 0 && user?.id !== DEMO_USER_ID && (
+                  <div className="mb-6 space-y-2">
+                    <p className="text-[10px] font-bold text-[var(--text-dim)] uppercase">{lang === 'tr' ? 'Birlikte çalışma davetleri' : 'Work together invites'}</p>
+                    {pendingPairInvites.map((inv) => (
+                      <div key={inv.id} className="p-3 border border-[var(--status-flow)] rounded-xl bg-[var(--status-flow)]/10 flex items-center justify-between gap-2">
+                        <span className="text-[10px] font-bold truncate flex-1">{inv.fromName} {t.pairInviteFrom}</span>
+                        <div className="flex gap-1 shrink-0">
+                          <button onClick={() => handleAcceptPairInvite(inv.id)} className="px-2 py-1 rounded bg-[var(--status-flow)] text-white text-[9px] font-black">{t.pairInviteAccept}</button>
+                          <button onClick={() => handleRejectPairInvite(inv.id)} className="px-2 py-1 rounded border border-[var(--border)] text-[9px] font-bold hover:bg-white/5">{t.pairInviteReject}</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 {pairedWithUserId && user?.id !== DEMO_USER_ID && (
                   <div className="mb-6 p-3 border border-[var(--status-flow)] rounded-xl bg-[var(--status-flow)]/10">
                     <p className="text-[10px] font-bold text-[var(--status-flow)] mb-2">{t.workingWith} {friends.find(f => f.id === pairedWithUserId)?.name ?? ''}</p>
@@ -1046,8 +1096,8 @@ const App: React.FC = () => {
                                 <div className="text-[8px] text-[var(--text-dim)] mt-1">{timeAgo}</div>
                               )}
                               {canWorkTogether && (
-                                <button onClick={() => handleWorkTogether(fa.id)} className="mt-2 w-full py-1.5 rounded-lg bg-[var(--status-flow)]/20 border border-[var(--status-flow)] text-[var(--status-flow)] text-[9px] font-black uppercase hover:bg-[var(--status-flow)]/30 transition-all">
-                                  {t.workTogether}
+                                <button onClick={() => handleWorkTogetherInvite(fa.id)} className="mt-2 w-full py-1.5 rounded-lg bg-[var(--status-flow)]/20 border border-[var(--status-flow)] text-[var(--status-flow)] text-[9px] font-black uppercase hover:bg-[var(--status-flow)]/30 transition-all">
+                                  {t.workTogetherInvite}
                                 </button>
                               )}
                             </div>
@@ -1328,6 +1378,23 @@ const App: React.FC = () => {
             <div className="text-[8px] font-black uppercase tracking-widest text-center border-t border-[var(--border)] pt-4">Neural Architecture by Fufit AI</div>
          </div>
       </aside>
+
+      {/* Birlikte Çalışma widget - sağ altta partner oturumu */}
+      {view === 'home' && pairedWithUserId && pairedFriendActivity && user?.id !== DEMO_USER_ID && (
+        <div className="fixed bottom-6 right-6 z-50 w-36 h-36 rounded-full border-2 border-[var(--border)] bg-[var(--bg-sidebar)] shadow-2xl flex flex-col items-center justify-center p-3 animate-fade">
+          <div className="text-[8px] font-black uppercase tracking-widest text-[var(--text-dim)] mb-1">{lang === 'tr' ? 'BİRLİKTE ÇALIŞMA' : 'CO-WORKING'}</div>
+          <div className="text-[9px] font-bold text-[var(--text-bright)] truncate w-full text-center mb-0.5">{pairedFriendActivity.activity || (lang === 'tr' ? 'Boş' : 'Empty')}</div>
+          <div className="text-2xl font-black tabular-nums text-[var(--text-bright)]">
+            {Math.floor(pairedFriendActivity.timeRemaining / 60).toString().padStart(2, '0')}:{(pairedFriendActivity.timeRemaining % 60).toString().padStart(2, '0')}
+          </div>
+          <div className="flex items-center gap-1.5 mt-1">
+            <div className={`w-1.5 h-1.5 rounded-full ${pairedFriendActivity.status === 'flow' ? 'bg-[var(--status-flow)] animate-pulse' : 'bg-[var(--text-dim)]'}`}></div>
+            <span className="text-[8px] font-black uppercase text-[var(--text-dim)]">
+              {pairedFriendActivity.status === 'flow' ? t.status.RUNNING : pairedFriendActivity.status === 'rest' ? t.status.PAUSED : t.status.IDLE}
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -163,3 +163,30 @@ LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
   AND EXISTS (SELECT 1 FROM room_members r2 WHERE r2.room_id = p_room_id AND r2.user_id = auth.uid());
 $$;
 GRANT EXECUTE ON FUNCTION get_room_members_with_profiles(uuid) TO authenticated;
+
+-- 10. pair_invites tablosu (Birlikte Çalış davet akışı)
+CREATE TABLE IF NOT EXISTS pair_invites (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  from_user_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  to_user_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'rejected')),
+  created_at timestamptz DEFAULT now(),
+  UNIQUE(from_user_id, to_user_id)
+);
+ALTER TABLE pair_invites ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can manage pair_invites" ON pair_invites;
+CREATE POLICY "Users can manage pair_invites" ON pair_invites FOR ALL
+  USING (auth.uid() = from_user_id OR auth.uid() = to_user_id)
+  WITH CHECK (auth.uid() = from_user_id OR auth.uid() = to_user_id);
+
+-- 11. RPC: Bekleyen birlikte çalış davetleri (profil bilgisiyle)
+CREATE OR REPLACE FUNCTION get_pending_pair_invites()
+RETURNS TABLE(id uuid, from_user_id uuid, from_name text, from_username text, created_at timestamptz)
+LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
+  SELECT pi.id, pi.from_user_id, p.name AS from_name, p.username AS from_username, pi.created_at
+  FROM pair_invites pi
+  JOIN profiles p ON p.id = pi.from_user_id
+  WHERE pi.to_user_id = auth.uid() AND pi.status = 'pending'
+  ORDER BY pi.created_at DESC;
+$$;
+GRANT EXECUTE ON FUNCTION get_pending_pair_invites() TO authenticated;
