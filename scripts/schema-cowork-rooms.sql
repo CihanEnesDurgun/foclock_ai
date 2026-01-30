@@ -48,7 +48,7 @@ ALTER TABLE rooms ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Host can manage own rooms" ON rooms;
 CREATE POLICY "Host can manage own rooms" ON rooms FOR ALL USING (auth.uid() = host_id) WITH CHECK (auth.uid() = host_id);
 
--- 5. room_members tablosu (önce oluşturulmalı - "Members can read room" politikası buna referans veriyor)
+-- 5. room_members tablosu
 CREATE TABLE IF NOT EXISTS room_members (
   room_id uuid NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
   user_id uuid NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
@@ -57,21 +57,35 @@ CREATE TABLE IF NOT EXISTS room_members (
   PRIMARY KEY (room_id, user_id)
 );
 ALTER TABLE room_members ENABLE ROW LEVEL SECURITY;
+
+-- RLS infinite recursion önleme: SECURITY DEFINER fonksiyonları (RLS bypass)
+CREATE OR REPLACE FUNCTION is_room_member(p_room_id uuid, p_user_id uuid)
+RETURNS boolean LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
+  SELECT EXISTS (SELECT 1 FROM room_members WHERE room_id = p_room_id AND user_id = p_user_id);
+$$;
+
+CREATE OR REPLACE FUNCTION is_room_host(p_room_id uuid, p_user_id uuid)
+RETURNS boolean LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
+  SELECT EXISTS (SELECT 1 FROM rooms WHERE id = p_room_id AND host_id = p_user_id);
+$$;
+GRANT EXECUTE ON FUNCTION is_room_member(uuid, uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION is_room_host(uuid, uuid) TO authenticated;
+
 DROP POLICY IF EXISTS "Users can manage room_members" ON room_members;
 CREATE POLICY "Users can manage room_members" ON room_members FOR ALL
   USING (
     auth.uid() = user_id
-    OR EXISTS (SELECT 1 FROM rooms r WHERE r.id = room_id AND r.host_id = auth.uid())
+    OR is_room_host(room_id, auth.uid())
   )
   WITH CHECK (
     auth.uid() = user_id
-    OR EXISTS (SELECT 1 FROM rooms r WHERE r.id = room_id AND r.host_id = auth.uid())
+    OR is_room_host(room_id, auth.uid())
   );
 
--- rooms tablosuna "Members can read room" politikası (room_members oluşturulduktan sonra)
+-- rooms tablosuna "Members can read room" politikası (recursion yok - is_room_member RLS bypass)
 DROP POLICY IF EXISTS "Members can read room" ON rooms;
 CREATE POLICY "Members can read room" ON rooms FOR SELECT USING (
-  EXISTS (SELECT 1 FROM room_members rm WHERE rm.room_id = rooms.id AND rm.user_id = auth.uid())
+  auth.uid() = host_id OR is_room_member(id, auth.uid())
 );
 
 -- 6. room_sessions tablosu (ortak timer, ortak görev)
