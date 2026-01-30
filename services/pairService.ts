@@ -97,7 +97,7 @@ export async function getPairedFriendId(userId: string): Promise<string | null> 
     .select('user_a, user_b')
     .or(`user_a.eq.${userId},user_b.eq.${userId}`)
     .limit(1)
-    .single();
+    .maybeSingle();
   if (error || !data) return null;
   return data.user_a === userId ? data.user_b : data.user_a;
 }
@@ -110,6 +110,6 @@ export async function isPairedWith(userId: string, friendId: string): Promise<bo
     .eq('user_a', userA)
     .eq('user_b', userB)
     .limit(1)
-    .single();
+    .maybeSingle();
   return !error && !!data;
 }
