@@ -88,6 +88,7 @@ const App: React.FC = () => {
   const [pairedWithUserId, setPairedWithUserId] = useState<string | null>(null);
   const [pairedFriendActivity, setPairedFriendActivity] = useState<FriendActivity | null>(null);
   const [pendingPairInvites, setPendingPairInvites] = useState<PairInvite[]>([]);
+  const [invitedFriendIds, setInvitedFriendIds] = useState<string[]>([]);
   const [myRooms, setMyRooms] = useState<Room[]>([]);
   const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
   const [loadingRooms, setLoadingRooms] = useState(false);
@@ -333,13 +334,17 @@ const App: React.FC = () => {
       handleComplete();
     } else {
       if (timerRef.current) clearInterval(timerRef.current);
-      // Clear active session when stopped/paused/reset
-      if (user && user.id !== DEMO_USER_ID && (status === TimerStatus.IDLE || status === TimerStatus.PAUSED || status === TimerStatus.COMPLETED)) {
-        authService.clearActiveSession(user.id);
+      if (user && currentTask && user.id !== DEMO_USER_ID) {
+        if (status === TimerStatus.PAUSED) {
+          const durationMins = Math.floor(sessionDuration / 60);
+          authService.updateActiveSession(user.id, currentTask, durationMins, timeLeft, 'paused', pairedWithUserId ?? undefined);
+        } else if (status === TimerStatus.IDLE || status === TimerStatus.COMPLETED) {
+          authService.clearActiveSession(user.id);
+        }
       }
     }
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [status, timeLeft, user, currentTask, sessionDuration]);
+  }, [status, timeLeft, user, currentTask, sessionDuration, pairedWithUserId]);
 
   const handleComplete = async () => {
     setStatus(TimerStatus.COMPLETED);
@@ -483,7 +488,7 @@ const App: React.FC = () => {
     if (!user || user.id === DEMO_USER_ID) return;
     const { success } = await sendPairInvite(user.id, friendId);
     if (success) {
-      // Davet gönderildi; karşı taraf kabul edene kadar bekleyecek
+      setInvitedFriendIds((prev) => [...prev.filter((id) => id !== friendId), friendId]);
     }
   };
 
@@ -1020,7 +1025,7 @@ const App: React.FC = () => {
                 )}
                 {pairedWithUserId && user?.id !== DEMO_USER_ID && (
                   <div className="mb-6 p-3 border border-[var(--status-flow)] rounded-xl bg-[var(--status-flow)]/10">
-                    <p className="text-[10px] font-bold text-[var(--status-flow)] mb-2">{t.workingWith} {friends.find(f => f.id === pairedWithUserId)?.name ?? ''}</p>
+                    <p className="text-[10px] font-bold text-[var(--status-flow)] mb-2">{friendActivities.find(a => a.id === pairedWithUserId)?.name ?? friends.find(f => f.id === pairedWithUserId)?.name ?? ''} {t.workingWith}</p>
                     <button onClick={handleEndPair} className="w-full py-2 rounded-lg border border-[var(--border)] text-[9px] font-black uppercase hover:bg-white/5 transition-all">{t.endPair}</button>
                   </div>
                 )}
@@ -1037,13 +1042,14 @@ const App: React.FC = () => {
                   <div className="space-y-3">
                     {friendActivities.map((fa) => {
                       const isActive = fa.status === 'flow';
+                      const isPaused = fa.status === 'paused';
                       const elapsed = fa.totalDuration > 0 ? Math.floor((fa.totalDuration - fa.timeRemaining) / 60) : 0;
                       const totalMins = Math.floor(fa.totalDuration / 60);
                       const progress = fa.totalDuration > 0 ? (fa.totalDuration - fa.timeRemaining) / fa.totalDuration : 0;
                       
-                      // Calculate time ago for inactive sessions
+                      // Calculate time ago for inactive sessions (idle only, not paused)
                       let timeAgo = '';
-                      if (!isActive && fa.lastSeen) {
+                      if (!isActive && !isPaused && fa.lastSeen) {
                         const lastSeenDate = new Date(fa.lastSeen);
                         const minutesAgo = Math.floor((Date.now() - lastSeenDate.getTime()) / (1000 * 60));
                         if (minutesAgo < 60) {
@@ -1055,7 +1061,8 @@ const App: React.FC = () => {
                       }
                       
                       const isPairedWithMe = fa.pairedWith === user?.id;
-                      const canWorkTogether = isActive && !isPairedWithMe && user?.id !== DEMO_USER_ID;
+                      const canWorkTogether = (isActive || isPaused) && !isPairedWithMe && user?.id !== DEMO_USER_ID;
+                      const inviteSent = invitedFriendIds.includes(fa.id);
                       return (
                         <div key={fa.id} className="p-2.5 border border-[var(--border)] rounded-xl bg-white/5 relative">
                           <div className="flex items-center gap-2.5">
@@ -1066,10 +1073,13 @@ const App: React.FC = () => {
                               {isActive && (
                                 <div className="absolute -bottom-0.5 -left-0.5 w-2.5 h-2.5 rounded-full bg-[var(--status-flow)] animate-pulse shadow-[0_0_6px_rgba(34,197,94,0.6)] border border-[var(--bg)]"></div>
                               )}
-                              {!isActive && fa.lastSeen && (
+                              {isPaused && (
+                                <div className="absolute -bottom-0.5 -left-0.5 w-2.5 h-2.5 rounded-full bg-amber-500 border border-[var(--bg)]"></div>
+                              )}
+                              {!isActive && !isPaused && fa.lastSeen && (
                                 <div className="absolute -bottom-0.5 -left-0.5 w-2 h-2 rounded-full bg-orange-500 border border-[var(--bg)]"></div>
                               )}
-                              {!isActive && !fa.lastSeen && (
+                              {!isActive && !isPaused && !fa.lastSeen && (
                                 <div className="absolute -bottom-0.5 -left-0.5 w-2 h-2 rounded-full bg-[var(--text-dim)] border border-[var(--bg)]"></div>
                               )}
                             </div>
@@ -1077,14 +1087,14 @@ const App: React.FC = () => {
                               <div className="flex items-center justify-between gap-2 mb-0.5">
                                 <div className="text-[10px] font-black uppercase tracking-tight text-[var(--text-bright)] truncate">{fa.name}</div>
                                 <span className="text-[9px] font-bold text-[var(--text-dim)] shrink-0">
-                                  {isActive ? `${elapsed}m` : totalMins > 0 ? `${totalMins}m` : ''}
+                                  {isActive ? `${elapsed}m` : isPaused ? `${t.paused} ${elapsed}m` : totalMins > 0 ? `${totalMins}m` : ''}
                                 </span>
                               </div>
                               {isPairedWithMe && (
-                                <div className="text-[8px] text-[var(--status-flow)] font-bold mb-1">{t.workingWith} {fa.name}</div>
+                                <div className="text-[8px] text-[var(--status-flow)] font-bold mb-1">{fa.name} {t.workingWith}</div>
                               )}
                               <div className="text-[9px] text-[var(--text-dim)] truncate mb-1.5">{fa.activity || (lang === 'tr' ? 'Boş' : 'Empty')}</div>
-                              {isActive && fa.totalDuration > 0 && (
+                              {(isActive || isPaused) && fa.totalDuration > 0 && (
                                 <div className="h-0.5 bg-[var(--border)] rounded-full overflow-hidden">
                                   <div 
                                     className="h-full bg-[var(--status-flow)] transition-all duration-500"
@@ -1092,12 +1102,12 @@ const App: React.FC = () => {
                                   ></div>
                                 </div>
                               )}
-                              {timeAgo && !isActive && (
+                              {timeAgo && !isActive && !isPaused && (
                                 <div className="text-[8px] text-[var(--text-dim)] mt-1">{timeAgo}</div>
                               )}
                               {canWorkTogether && (
-                                <button onClick={() => handleWorkTogetherInvite(fa.id)} className="mt-2 w-full py-1.5 rounded-lg bg-[var(--status-flow)]/20 border border-[var(--status-flow)] text-[var(--status-flow)] text-[9px] font-black uppercase hover:bg-[var(--status-flow)]/30 transition-all">
-                                  {t.workTogetherInvite}
+                                <button onClick={() => handleWorkTogetherInvite(fa.id)} disabled={inviteSent} className="mt-2 w-full py-1.5 rounded-lg bg-[var(--status-flow)]/20 border border-[var(--status-flow)] text-[var(--status-flow)] text-[9px] font-black uppercase hover:bg-[var(--status-flow)]/30 transition-all disabled:opacity-70">
+                                  {inviteSent ? t.inviteSent : t.workTogetherInvite}
                                 </button>
                               )}
                             </div>
@@ -1384,13 +1394,22 @@ const App: React.FC = () => {
         <div className="fixed bottom-6 right-6 z-50 w-36 h-36 rounded-full border-2 border-[var(--border)] bg-[var(--bg-sidebar)] shadow-2xl flex flex-col items-center justify-center p-3 animate-fade">
           <div className="text-[8px] font-black uppercase tracking-widest text-[var(--text-dim)] mb-1">{lang === 'tr' ? 'BİRLİKTE ÇALIŞMA' : 'CO-WORKING'}</div>
           <div className="text-[9px] font-bold text-[var(--text-bright)] truncate w-full text-center mb-0.5">{pairedFriendActivity.activity || (lang === 'tr' ? 'Boş' : 'Empty')}</div>
-          <div className="text-2xl font-black tabular-nums text-[var(--text-bright)]">
-            {Math.floor(pairedFriendActivity.timeRemaining / 60).toString().padStart(2, '0')}:{(pairedFriendActivity.timeRemaining % 60).toString().padStart(2, '0')}
-          </div>
+          {pairedFriendActivity.status === 'paused' ? (
+            <div className="text-center">
+              <div className="text-[10px] font-black text-amber-500 uppercase">{t.paused}</div>
+              <div className="text-xl font-black tabular-nums text-[var(--text-bright)]">
+                {Math.floor((pairedFriendActivity.totalDuration - pairedFriendActivity.timeRemaining) / 60)}m
+              </div>
+            </div>
+          ) : (
+            <div className="text-2xl font-black tabular-nums text-[var(--text-bright)]">
+              {Math.floor(pairedFriendActivity.timeRemaining / 60).toString().padStart(2, '0')}:{(pairedFriendActivity.timeRemaining % 60).toString().padStart(2, '0')}
+            </div>
+          )}
           <div className="flex items-center gap-1.5 mt-1">
-            <div className={`w-1.5 h-1.5 rounded-full ${pairedFriendActivity.status === 'flow' ? 'bg-[var(--status-flow)] animate-pulse' : 'bg-[var(--text-dim)]'}`}></div>
+            <div className={`w-1.5 h-1.5 rounded-full ${pairedFriendActivity.status === 'flow' ? 'bg-[var(--status-flow)] animate-pulse' : pairedFriendActivity.status === 'paused' ? 'bg-amber-500' : 'bg-[var(--text-dim)]'}`}></div>
             <span className="text-[8px] font-black uppercase text-[var(--text-dim)]">
-              {pairedFriendActivity.status === 'flow' ? t.status.RUNNING : pairedFriendActivity.status === 'rest' ? t.status.PAUSED : t.status.IDLE}
+              {pairedFriendActivity.status === 'flow' ? t.status.RUNNING : pairedFriendActivity.status === 'paused' ? t.paused : pairedFriendActivity.status === 'rest' ? t.status.PAUSED : t.status.IDLE}
             </span>
           </div>
         </div>

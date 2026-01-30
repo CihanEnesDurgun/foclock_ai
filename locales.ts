@@ -79,6 +79,7 @@ export const locales = {
     friendActivityEmpty: "Henüz arkadaş etkinliği yok.",
     workTogether: "Birlikte Çalış",
     workTogetherInvite: "Davet Gönder",
+    inviteSent: "Davet Gönderildi",
     pairInviteFrom: "seni birlikte çalışmaya davet etti",
     pairInviteAccept: "Kabul",
     pairInviteReject: "Reddet",
@@ -184,6 +185,7 @@ export const locales = {
     friendActivityEmpty: "No friend activity yet.",
     workTogether: "Work Together",
     workTogetherInvite: "Send Invite",
+    inviteSent: "Invite Sent",
     pairInviteFrom: "invited you to work together",
     pairInviteAccept: "Accept",
     pairInviteReject: "Reject",
@@ -208,6 +210,7 @@ export const locales = {
     codeCopied: "Copied!",
     roomFull: "Room is full.",
     roomNotFound: "Room not found.",
+    paused: "Paused",
     status: { IDLE: "READY", RUNNING: "FLOWING", PAUSED: "PAUSED", COMPLETED: "COMPLETED" }
   }
 };

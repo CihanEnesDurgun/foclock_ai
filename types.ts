@@ -69,7 +69,7 @@ export interface ChatMessage {
 export interface FriendActivity {
   id: string;
   name: string;
-  status: 'flow' | 'rest' | 'idle';
+  status: 'flow' | 'rest' | 'idle' | 'paused';
   activity: string;
   timeRemaining: number;
   totalDuration: number;
