@@ -22,12 +22,12 @@ export async function getFriendActivities(
     return [];
   }
 
-  // Get active sessions for friends
+  // Get active sessions for friends (running veya paused)
   const { data: activeSessions, error: activeError } = await supabase
     .from('active_sessions')
     .select('user_id, task_title, duration_minutes, time_remaining_seconds, status, updated_at, paired_with_user_id')
     .in('user_id', friendIds)
-    .eq('status', 'running');
+    .or('status.eq.running,status.eq.paused');
 
   if (activeError) {
     console.warn('getFriendActivities active_sessions error:', activeError);
@@ -64,11 +64,11 @@ export async function getFriendActivities(
     const completed = completedMap.get(profile.id);
 
     if (active) {
-      // Friend has active session
+      // Friend has active session (running veya paused)
       activities.push({
         id: profile.id,
         name: profile.name,
-        status: active.status === 'running' ? 'flow' : 'idle',
+        status: active.status === 'running' ? 'flow' : active.status === 'paused' ? 'paused' : 'idle',
         activity: active.task_title || '',
         timeRemaining: active.time_remaining_seconds,
         totalDuration: active.duration_minutes * 60,
@@ -103,10 +103,12 @@ export async function getFriendActivities(
     }
   }
 
-  // Sort: active first, then by last seen
+  // Sort: flow first, then paused, then by last seen
   activities.sort((a, b) => {
     if (a.status === 'flow' && b.status !== 'flow') return -1;
     if (a.status !== 'flow' && b.status === 'flow') return 1;
+    if (a.status === 'paused' && b.status !== 'paused') return -1;
+    if (a.status !== 'paused' && b.status === 'paused') return 1;
     if (!a.lastSeen) return 1;
     if (!b.lastSeen) return -1;
     return new Date(b.lastSeen).getTime() - new Date(a.lastSeen).getTime();
