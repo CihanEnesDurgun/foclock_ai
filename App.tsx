@@ -99,6 +99,8 @@ const App: React.FC = () => {
   const [roomSessionTimeLeft, setRoomSessionTimeLeft] = useState(0);
   const [roomSessionDuration, setRoomSessionDuration] = useState(0);
   const [roomCodeCopied, setRoomCodeCopied] = useState(false);
+  const [roomError, setRoomError] = useState('');
+  const [roomCreating, setRoomCreating] = useState(false);
   const roomTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -519,22 +521,35 @@ const App: React.FC = () => {
 
   const handleCreateRoom = async () => {
     if (!user || user.id === DEMO_USER_ID) return;
-    const { success, room, error } = await createRoom(user.id, roomCreateTitle, roomCreateDuration);
-    if (success && room) {
-      setMyRooms((prev) => [room, ...prev]);
-      setCurrentRoom(room);
-      setRoomCreateTitle('');
-      setRoomCreateDuration(25);
+    setRoomError('');
+    setRoomCreating(true);
+    try {
+      const { success, room, error } = await createRoom(user.id, roomCreateTitle, roomCreateDuration);
+      if (success && room) {
+        const fullRoom = await getRoom(user.id, room.id);
+        const roomToSet = fullRoom ?? room;
+        setMyRooms((prev) => [roomToSet, ...prev.filter((r) => r.id !== roomToSet.id)]);
+        setCurrentRoom(roomToSet);
+        setRoomCreateTitle('');
+        setRoomCreateDuration(25);
+      } else {
+        setRoomError(error ?? (lang === 'tr' ? 'Oda oluşturulamadı.' : 'Could not create room.'));
+      }
+    } finally {
+      setRoomCreating(false);
     }
   };
 
   const handleJoinRoom = async () => {
     if (!user || user.id === DEMO_USER_ID) return;
-    const { success, room, error } = await joinRoomByCode(user.id, roomJoinCode);
+    setRoomError('');
+    const { success, room, error } = await joinRoomByCode(user.id, roomJoinCode.trim());
     if (success && room) {
       setMyRooms((prev) => [room, ...prev.filter((r) => r.id !== room.id)]);
       setCurrentRoom(room);
       setRoomJoinCode('');
+    } else {
+      setRoomError(error ?? (lang === 'tr' ? 'Odaya katılınamadı.' : 'Could not join room.'));
     }
   };
 
@@ -1144,14 +1159,16 @@ const App: React.FC = () => {
                         <label className="block text-[10px] font-bold uppercase text-[var(--text-dim)] mb-1">{t.roomDuration}</label>
                         <input type="number" min={5} max={90} value={roomCreateDuration} onChange={(e) => setRoomCreateDuration(parseInt(e.target.value) || 25)} className="w-full bg-white/5 border border-[var(--border)] rounded-xl px-4 py-2.5 text-[10px] outline-none focus:border-[var(--text-bright)]" />
                       </div>
-                      <button onClick={handleCreateRoom} className="w-full py-3 rounded-xl bg-[var(--accent)] text-[var(--accent-text)] text-[10px] font-black uppercase">{t.createRoom}</button>
+                      {roomError && <p className="text-[10px] text-red-400 mb-2">{roomError}</p>}
+                      <button type="button" onClick={handleCreateRoom} disabled={roomCreating} className="w-full py-3 rounded-xl bg-[var(--accent)] text-[var(--accent-text)] text-[10px] font-black uppercase disabled:opacity-60 cursor-pointer hover:opacity-90 active:scale-[0.98] transition-all">{roomCreating ? (lang === 'tr' ? 'Oluşturuluyor...' : 'Creating...') : t.createRoom}</button>
                     </div>
                     <div className="border-t border-[var(--border)] pt-6 mb-6">
                       <label className="block text-[10px] font-bold uppercase text-[var(--text-dim)] mb-2">{t.joinRoom}</label>
                       <div className="flex gap-2">
-                        <input value={roomJoinCode} onChange={(e) => setRoomJoinCode(e.target.value.toUpperCase())} placeholder={t.roomCodePlaceholder} maxLength={6} className="flex-1 bg-white/5 border border-[var(--border)] rounded-xl px-4 py-2.5 text-[10px] uppercase outline-none focus:border-[var(--text-bright)]" />
+                        <input value={roomJoinCode} onChange={(e) => { setRoomJoinCode(e.target.value.toUpperCase()); setRoomError(''); }} placeholder={t.roomCodePlaceholder} maxLength={6} className="flex-1 bg-white/5 border border-[var(--border)] rounded-xl px-4 py-2.5 text-[10px] uppercase outline-none focus:border-[var(--text-bright)]" />
                         <button onClick={handleJoinRoom} disabled={roomJoinCode.trim().length < 4} className="px-4 py-2.5 rounded-xl bg-[var(--accent)] text-[var(--accent-text)] text-[10px] font-black uppercase disabled:opacity-40">{t.joinRoom}</button>
                       </div>
+                      {roomError && <p className="text-[10px] text-red-400 mt-2">{roomError}</p>}
                     </div>
                     <div className="space-y-2 mb-6">
                       <p className="text-[10px] font-bold text-[var(--text-dim)] uppercase">{t.myRooms}</p>
