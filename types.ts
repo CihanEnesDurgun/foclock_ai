@@ -113,3 +113,9 @@ export interface RoomSessionState {
   startedAt: string;
   updatedAt: string;
 }
+
+export interface AIConversationListItem {
+  id: string;
+  title: string;
+  updatedAt: string;
+}
