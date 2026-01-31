@@ -104,6 +104,11 @@ export const locales = {
     codeCopied: "Kopyalandı!",
     roomFull: "Oda dolu.",
     roomNotFound: "Oda bulunamadı.",
+    chatHistory: "Sohbet Geçmişi",
+    newChat: "Yeni Sohbet",
+    noChatsYet: "Henüz sohbet yok.",
+    continueChat: "Sohbete devam et",
+    chatHistoryLoginHint: "Giriş yapın, sohbet geçmişiniz kaydedilsin.",
     status: { IDLE: "HAZIR", RUNNING: "AKIŞTA", PAUSED: "DURAKLADI", COMPLETED: "TAMAMLANDI" }
   },
   en: {
@@ -211,6 +216,11 @@ export const locales = {
     roomFull: "Room is full.",
     roomNotFound: "Room not found.",
     paused: "Paused",
+    chatHistory: "Chat History",
+    newChat: "New Chat",
+    noChatsYet: "No chats yet.",
+    continueChat: "Continue chat",
+    chatHistoryLoginHint: "Sign in to save your chat history.",
     status: { IDLE: "READY", RUNNING: "FLOWING", PAUSED: "PAUSED", COMPLETED: "COMPLETED" }
   }
 };

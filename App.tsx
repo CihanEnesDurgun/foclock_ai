@@ -29,6 +29,15 @@ import {
   updateRoomSession,
   completeRoomSession,
 } from './services/roomService';
+import {
+  createConversation,
+  getConversations,
+  getConversation,
+  addMessage,
+  updateConversationTitle,
+  updateConversationTasks,
+  type AIConversationListItem,
+} from './services/chatService';
 import { locales } from './locales';
 import { getQuote, quoteCount, ROTATION_INTERVAL_MS } from './quotes';
 import { VERSION } from './version';
@@ -68,6 +77,10 @@ const App: React.FC = () => {
   
   const [plannedTasks, setPlannedTasks] = useState<PlannedTask[]>([]);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [chatHistoryPanelOpen, setChatHistoryPanelOpen] = useState(false);
+  const [chatConversations, setChatConversations] = useState<AIConversationListItem[]>([]);
+  const [loadingChatHistory, setLoadingChatHistory] = useState(false);
   const [userInput, setUserInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [queueOpen, setQueueOpen] = useState(true);
@@ -195,6 +208,15 @@ const App: React.FC = () => {
       .then(setFriends)
       .finally(() => setLoadingFriendsList(false));
   }, [sidebarModule, user?.id, user?.friends?.length]);
+
+  // Sohbet geçmişi: panel açıldığında listeyi yükle (demo hariç)
+  useEffect(() => {
+    if (!chatHistoryPanelOpen || !user || user.id === DEMO_USER_ID) return;
+    setLoadingChatHistory(true);
+    getConversations(user.id)
+      .then(setChatConversations)
+      .finally(() => setLoadingChatHistory(false));
+  }, [chatHistoryPanelOpen, user?.id]);
 
   // Birlikte Çalış: paired durumunu yükle ve periyodik güncelle (davet kabul edildiğinde widget için)
   useEffect(() => {
@@ -368,20 +390,28 @@ const App: React.FC = () => {
         setStats(prev => [...prev, { task_title: currentTask, duration_minutes: durationMins, completed_at: new Date().toISOString() }]);
       }
 
-      setPlannedTasks(prev => prev.map(tk => {
+      const updatedTasks = plannedTasks.map((tk) => {
         if (tk.title === currentTask) {
           return { ...tk, completedBlocks: Math.min(tk.completedBlocks + 1, tk.durations.length) };
         }
         return tk;
-      }));
+      });
+      setPlannedTasks(updatedTasks);
 
+      let summary: string;
       try {
-        const summary = isDemo
+        summary = isDemo
           ? `[Demo] "${currentTask}" için ${durationMins} dakikalık odak tamamlandı.`
           : await summarizeSession(currentTask, user.field, lang);
-        setChatMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'assistant', content: summary, timestamp: Date.now() }]);
       } catch {
-        setChatMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'assistant', content: `"${currentTask}" tamamlandı (${durationMins} dk).`, timestamp: Date.now() }]);
+        summary = `"${currentTask}" tamamlandı (${durationMins} dk).`;
+      }
+      const summaryMsg: ChatMessage = { id: crypto.randomUUID(), role: 'assistant', content: summary, timestamp: Date.now() };
+      setChatMessages((prev) => [...prev, summaryMsg]);
+
+      if (currentConversationId && !isDemo) {
+        addMessage(currentConversationId, 'assistant', summary);
+        updateConversationTasks(currentConversationId, updatedTasks);
       }
     }
   };
@@ -592,26 +622,83 @@ const App: React.FC = () => {
   };
 
   const handleChat = async () => {
-    if (!userInput.trim() || isProcessing) return;
-    const msg: ChatMessage = { id: crypto.randomUUID(), role: 'user', content: userInput, timestamp: Date.now() };
-    setChatMessages(prev => [...prev, msg]);
+    if (!userInput.trim() || isProcessing || !user) return;
+    const input = userInput.trim();
+    const msg: ChatMessage = { id: crypto.randomUUID(), role: 'user', content: input, timestamp: Date.now() };
+    setChatMessages((prev) => [...prev, msg]);
     setUserInput('');
     setIsProcessing(true);
+
+    let convId = currentConversationId;
+    const isDemo = user.id === DEMO_USER_ID;
+
     try {
-      const res = await suggestPlan(userInput, chatMessages.map(m => m.content).join('\n'), `Name: ${user?.name}, Field: ${user?.field}`, lang);
-      const isExecute = res.includes("[EXECUTE_BLUEPRINT]");
-      setChatMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'assistant', content: res.replace("[EXECUTE_BLUEPRINT]", ""), timestamp: Date.now() }]);
-      
-      if (isExecute) {
-        const tasks = await finalizeTasks(chatMessages.concat(msg).map(m => m.content).join('\n'), user?.field || "", lang);
-        setPlannedTasks(tasks.map(tk => ({ 
-          ...tk, 
-          id: crypto.randomUUID(), 
-          completedBlocks: 0, 
-          totalMinutes: tk.durations.reduce((a: number, b: number) => a + b, 0) 
-        })));
+      if (!convId && !isDemo) {
+        const created = await createConversation(user.id);
+        if (created) {
+          convId = created.id;
+          setCurrentConversationId(convId);
+        }
       }
-    } finally { setIsProcessing(false); }
+
+      if (convId && !isDemo) {
+        await addMessage(convId, 'user', input);
+        if (chatMessages.length === 0) {
+          updateConversationTitle(convId, input.slice(0, 80) || t.newChat);
+        }
+      }
+
+      const res = await suggestPlan(input, chatMessages.map((m) => m.content).join('\n'), `Name: ${user?.name}, Field: ${user?.field}`, lang);
+      const isExecute = res.includes('[EXECUTE_BLUEPRINT]');
+      const assistantContent = res.replace('[EXECUTE_BLUEPRINT]', '');
+      const assistantMsg: ChatMessage = { id: crypto.randomUUID(), role: 'assistant', content: assistantContent, timestamp: Date.now() };
+      setChatMessages((prev) => [...prev, assistantMsg]);
+
+      if (convId && !isDemo) {
+        await addMessage(convId, 'assistant', assistantContent);
+      }
+
+      if (isExecute) {
+        const tasks = await finalizeTasks(
+          chatMessages.concat(msg).map((m) => m.content).join('\n'),
+          user?.field || '',
+          lang
+        );
+        const newTasks = tasks.map((tk) => ({
+          ...tk,
+          id: crypto.randomUUID(),
+          completedBlocks: 0,
+          totalMinutes: tk.durations.reduce((a: number, b: number) => a + b, 0),
+        }));
+        setPlannedTasks(newTasks);
+        if (convId && !isDemo) {
+          updateConversationTasks(convId, newTasks);
+        }
+      }
+
+      if (convId && chatHistoryPanelOpen) {
+        getConversations(user.id).then(setChatConversations);
+      }
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleNewChat = () => {
+    setCurrentConversationId(null);
+    setChatMessages([]);
+    setPlannedTasks([]);
+    setChatHistoryPanelOpen(false);
+  };
+
+  const handleSelectConversation = async (id: string) => {
+    if (!user || user.id === DEMO_USER_ID) return;
+    const conv = await getConversation(id, user.id);
+    if (!conv || !conv.messages) return;
+    setCurrentConversationId(conv.id);
+    setChatMessages(conv.messages);
+    setPlannedTasks(conv.plannedTasks ?? []);
+    setChatHistoryPanelOpen(false);
   };
 
   const startTask = async (task: PlannedTask) => {
@@ -879,8 +966,68 @@ const App: React.FC = () => {
 
   return (
     <div className="app-shell" data-theme={theme}>
-      <aside className="sidebar-left">
-        <div className="sidebar-header"><span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-bright)]">{t.architectTitle}</span></div>
+      <aside className="sidebar-left relative">
+        <div className="sidebar-header flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={() => setChatHistoryPanelOpen((o) => !o)}
+            className="p-1.5 rounded-lg hover:bg-white/5 transition-colors text-[var(--text-bright)]"
+            aria-label={t.chatHistory}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
+          <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-bright)] flex-1 text-center">{t.architectTitle}</span>
+          <button
+            type="button"
+            onClick={handleNewChat}
+            className="text-[9px] font-bold uppercase tracking-wider text-[var(--text-dim)] hover:text-[var(--text-bright)] transition-colors px-2 py-1"
+          >
+            {t.newChat}
+          </button>
+        </div>
+        {chatHistoryPanelOpen && (
+          <div className="absolute left-0 top-[52px] bottom-0 w-[280px] z-30 bg-[var(--bg-sidebar)] border-r border-[var(--border)] shadow-xl flex flex-col overflow-hidden">
+            <div className="p-3 border-b border-[var(--border)]">
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-[var(--text-bright)] mb-2">{t.chatHistory}</h3>
+              <button
+                type="button"
+                onClick={handleNewChat}
+                className="w-full py-2.5 text-[10px] font-bold uppercase tracking-wider border border-[var(--border)] rounded-xl hover:bg-white/5 transition-colors"
+              >
+                + {t.newChat}
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
+              {user?.id === DEMO_USER_ID ? (
+                <p className="text-[10px] text-[var(--text-dim)] italic px-2 py-4">{t.chatHistoryLoginHint}</p>
+              ) : loadingChatHistory ? (
+                <p className="text-[10px] text-[var(--text-dim)] italic px-2 py-4">{t.loading}</p>
+              ) : chatConversations.length === 0 ? (
+                <p className="text-[10px] text-[var(--text-dim)] italic px-2 py-4">{t.noChatsYet}</p>
+              ) : (
+                chatConversations.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => handleSelectConversation(c.id)}
+                    className={`w-full text-left px-3 py-2.5 rounded-xl mb-1.5 transition-colors text-[10px] ${
+                      currentConversationId === c.id
+                        ? 'bg-white/10 border border-[var(--text-bright)] text-[var(--text-bright)]'
+                        : 'border border-transparent hover:bg-white/5 text-[var(--text-main)]'
+                    }`}
+                  >
+                    <span className="block truncate font-semibold">{c.title || t.newChat}</span>
+                    <span className="block text-[9px] text-[var(--text-dim)] mt-0.5">
+                      {new Date(c.updatedAt).toLocaleDateString(lang === 'tr' ? 'tr-TR' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </span>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        )}
         <div className={`chat-section min-h-0 transition-all duration-300 ${queueOpen ? 'flex-[1.5]' : 'flex-1'}`}>
           <div className="chat-history custom-scrollbar pr-2">
             {chatMessages.length === 0 && <div className="text-[10px] text-[var(--text-dim)] italic text-center mt-24 tracking-[0.2em] leading-loose px-6" dangerouslySetInnerHTML={{ __html: `"${t.welcomeQuote}"` }} />}

@@ -7,13 +7,15 @@
 | **`cleanup-data.sql`** | `friend_requests`, `sessions`, `profiles`, `auth.users` verisini siler. Sıfırdan test öncesi çalıştır. |
 | **`schema.sql`** | Trigger kaldırır; `profiles` (username), `friend_requests`, RLS, RPC’leri kurar. Şema için tek script. |
 | **`schema-cowork-rooms.sql`** | Birlikte Çalış + Odalar: `sessions`, `co_work_pairs`, `rooms`, `room_members`, `room_sessions`, RPC'ler. |
+| **`schema-ai-chats.sql`** | AI Sohbet Geçmişi: `ai_conversations`, `ai_messages`, RLS. |
 
 ## Sıra
 
 1. **`cleanup-data.sql`** → Veri temizliği (sen Supabase’te query’leri silip bu DELETE’leri de çalıştırıyorsun).
 2. **`schema.sql`** → Şemayı kur / güncelle.
 3. **`schema-cowork-rooms.sql`** → Birlikte Çalış ve Odalar özellikleri için (schema.sql'den sonra).
-4. Uygulamada **Kayıt Ol** → **Giriş Yap** ile test et.
+4. **`schema-ai-chats.sql`** → AI sohbet geçmişi için (schema.sql ve schema-cowork-rooms.sql'den sonra).
+5. Uygulamada **Kayıt Ol** → **Giriş Yap** ile test et.
 
 **Not:** `sessions` tablosu yoksa `DELETE FROM sessions;` satırını sil veya yoruma al.
 
