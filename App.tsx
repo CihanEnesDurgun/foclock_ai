@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { TimerStatus, PomodoroSession, PlannedTask, TimerMode, ChatMessage, User, FriendActivity, FriendRequest, Room } from './types';
-import { suggestPlan, finalizeTasks, getMotivation, summarizeSession, formatMessage, generateChatTitle } from './services/geminiService';
+import { suggestPlan, finalizeTasks, getMotivation, summarizeSession, formatMessage, generateChatTitle, extractNewInsights } from './services/geminiService';
 import { authService } from './services/authService';
 import { getFriendActivities } from './services/friendActivityService';
 import {
@@ -38,6 +38,7 @@ import {
   updateConversationTasks,
   type AIConversationListItem,
 } from './services/chatService';
+import { getInsightsForUser, addInsights, buildUserContext } from './services/userMemoryService';
 import { locales } from './locales';
 import { getQuote, quoteCount, ROTATION_INTERVAL_MS } from './quotes';
 import { VERSION } from './version';
@@ -665,7 +666,15 @@ const App: React.FC = () => {
         }
       }
 
-      const res = await suggestPlan(input, chatMessages.map((m) => m.content).join('\n'), `Name: ${user?.name}, Field: ${user?.field}`, lang);
+      const learnedInsights = isDemo ? [] : await getInsightsForUser(user.id);
+      const userContext = buildUserContext(
+        user?.name || '',
+        user?.field || '',
+        user?.projectTags || [],
+        learnedInsights
+      );
+
+      const res = await suggestPlan(input, chatMessages.map((m) => m.content).join('\n'), userContext, lang);
       const isExecute = res.includes('[EXECUTE_BLUEPRINT]');
       const assistantContent = res.replace('[EXECUTE_BLUEPRINT]', '');
       const assistantMsg: ChatMessage = { id: crypto.randomUUID(), role: 'assistant', content: assistantContent, timestamp: Date.now() };
@@ -676,11 +685,15 @@ const App: React.FC = () => {
       }
 
       if (isExecute) {
-        const tasks = await finalizeTasks(
-          chatMessages.concat(msg).map((m) => m.content).join('\n'),
-          user?.field || '',
-          lang
-        );
+        const fullHistory = chatMessages.concat(msg).map((m) => m.content).join('\n');
+        if (!isDemo) {
+          const currentMemory = learnedInsights.join('\n');
+          const newInsights = await extractNewInsights(fullHistory, currentMemory);
+          if (newInsights.length > 0) {
+            await addInsights(user.id, newInsights, 'conversation');
+          }
+        }
+        const tasks = await finalizeTasks(fullHistory, userContext, lang);
         const newTasks = tasks.map((tk) => ({
           ...tk,
           id: crypto.randomUUID(),
