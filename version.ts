@@ -6,7 +6,7 @@
 export const VERSION = {
   // Main version number (matches package.json)
   major: 1,
-  minor: 4,
+  minor: 5,
   patch: 'B', // Can be number or string (e.g., 0, 'B', 'RC1')
   
   // Version strings for different contexts
