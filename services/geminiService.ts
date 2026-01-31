@@ -182,7 +182,7 @@ export const extractNewInsights = async (conversation: string, currentMemory: st
     type: Type.ARRAY,
     items: { type: Type.STRING }
   };
-  const prompt = `Extract habits/background from: ${conversation}. Existing: ${currentMemory}`;
+  const prompt = `Extract work habits and preferences from this planning conversation. Focus on: preferred block durations (e.g. 25, 45, 90 min), productive hours, task types, recurring patterns, focus style. Output only NEW facts not already in existing memory. Existing: ${currentMemory || "None"}. Conversation: ${conversation}`;
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
@@ -190,7 +190,7 @@ export const extractNewInsights = async (conversation: string, currentMemory: st
       config: {
         responseMimeType: "application/json",
         responseSchema: schema,
-        systemInstruction: "Memory extraction unit. Minimalist facts only."
+        systemInstruction: "Memory extraction. Output short, factual work-habit insights only. One insight per item. No duplicates of existing memory."
       }
     });
     return JSON.parse(response.text);

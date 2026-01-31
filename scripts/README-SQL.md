@@ -8,6 +8,7 @@
 | **`schema.sql`** | Trigger kaldırır; `profiles` (username), `friend_requests`, RLS, RPC’leri kurar. Şema için tek script. |
 | **`schema-cowork-rooms.sql`** | Birlikte Çalış + Odalar: `sessions`, `co_work_pairs`, `rooms`, `room_members`, `room_sessions`, RPC'ler. |
 | **`schema-ai-chats.sql`** | AI Sohbet Geçmişi: `ai_conversations`, `ai_messages`, RLS. |
+| **`schema-user-ai-memory.sql`** | Kullanıcı AI Belleği: `user_ai_memory` – çalışma alışkanlıklarını öğrenip planlamada kullanır. |
 
 ## Sıra
 
@@ -15,7 +16,8 @@
 2. **`schema.sql`** → Şemayı kur / güncelle.
 3. **`schema-cowork-rooms.sql`** → Birlikte Çalış ve Odalar özellikleri için (schema.sql'den sonra).
 4. **`schema-ai-chats.sql`** → AI sohbet geçmişi için (schema.sql ve schema-cowork-rooms.sql'den sonra).
-5. Uygulamada **Kayıt Ol** → **Giriş Yap** ile test et.
+5. **`schema-user-ai-memory.sql`** → Kullanıcı AI belleği için (schema-ai-chats.sql'den sonra).
+6. Uygulamada **Kayıt Ol** → **Giriş Yap** ile test et.
 
 **Not:** `sessions` tablosu yoksa `DELETE FROM sessions;` satırını sil veya yoruma al.
 
