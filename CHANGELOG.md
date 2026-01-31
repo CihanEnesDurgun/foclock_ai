@@ -1,5 +1,31 @@
 # Changelog
 
+## [1.5.B] – Welcome Screen Overhaul & UX Improvements (2026-01-31)
+
+### Welcome Screen Redesign
+
+- **Complete UI overhaul:** Modern, minimal welcome screen with full-width layout
+- **Theme support:** Light and dark theme with toggle button in header
+- **Theme-based screenshots:** Real app screenshots (prompt + active session) for both themes
+- **Interactive tutorial:** "How it works" section with step-by-step guide and app screenshots
+- **Feature cards:** AI Planning, Ultradian & Flow, Social Focus, Analytics in horizontal grid
+- **No aspect ratio cropping:** Screenshots use `object-contain` to preserve natural proportions
+
+### UX Improvements
+
+- **Splash screen removed:** App loads directly to welcome screen (no loading spinner delay)
+- **Default theme:** Light theme set as default for new visitors
+- **Full-width layout:** Maximized horizontal space usage, no dead zones on sides
+
+### Files Modified
+
+- `App.tsx` – Welcome screen redesign, theme toggle, splash removal, default theme
+- `version.ts` – Version bump to 1.5.B
+- `package.json` – Version bump to 1.5.0
+- `public/assets/tutorial/` – Added ana-ekran-dark.png, ana-ekran-light.png
+
+---
+
 ## [1.4.0] – Documentation & README Update (2026-01-26)
 
 ### Documentation Improvements

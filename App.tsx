@@ -58,7 +58,7 @@ const demoUser: User = {
 };
 
 const App: React.FC = () => {
-  const [view, setView] = useState<'splash' | 'welcome' | 'auth' | 'home'>('splash');
+  const [view, setView] = useState<'welcome' | 'auth' | 'home'>('welcome');
   const [user, setUser] = useState<User | null>(null);
   const [isLogin, setIsLogin] = useState(true);
   const [authError, setAuthError] = useState('');
@@ -67,7 +67,7 @@ const App: React.FC = () => {
   
   const [sidebarModule, setSidebarModule] = useState<'default' | 'analytics' | 'settings' | 'social' | 'account' | 'rooms'>('default');
   const [lang, setLang] = useState<'tr' | 'en'>('tr');
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [theme, setTheme] = useState<'dark' | 'light'>('light');
   const [testMode, setTestMode] = useState(false); // 1 dakika = 1 saniye
   const [timeLeft, setTimeLeft] = useState(1500);
   const [sessionDuration, setSessionDuration] = useState(1500);
@@ -157,7 +157,7 @@ const App: React.FC = () => {
             }
           }
         } else {
-          setTimeout(() => setView('welcome'), 1000);
+          setView('welcome');
         }
       } catch (e) {
         setView('welcome');
@@ -743,28 +743,26 @@ const App: React.FC = () => {
     setMotivation(quote);
   };
 
-  if (view === 'splash') {
-    return (
-      <div className="h-screen w-screen bg-black flex flex-col items-center justify-center">
-        <div className="w-20 h-20 border-t-2 border-white rounded-full animate-spin"></div>
-        <h1 className="mt-8 text-white font-black tracking-widest uppercase text-[10px] animate-pulse">{VERSION.neuralLink}</h1>
-      </div>
-    );
-  }
-
   if (view === 'welcome') {
     const welcomeTexts = {
       tr: {
         title: 'FoClock AI',
         subtitle: 'Nöral Odak Motoru',
+        tagline: 'Bilimsel temellere dayalı odak yönetimi',
         beta: VERSION.betaLabel,
-        betaMessage: '🎯 Özel erişim: Bu beta sürümünü test eden seçili kullanıcılardan birisiniz. Sizin deneyiminiz ve geri bildirimleriniz FoClock AI\'nın geleceğini şekillendiriyor.',
-        feature1Title: 'AI Destekli Planlama',
-        feature1Desc: 'Fufit AI ile görevlerinizi bilimsel temellere dayalı olarak planlayın ve optimize edin.',
-        feature2Title: 'Ultradian Ritimler',
-        feature2Desc: '90 dakikalık derin odak blokları ve 20 dakikalık zorunlu resetler ile doğal ritminize uyum sağlayın.',
-        feature3Title: 'Flow State Protokolü',
-        feature3Desc: 'Bilişsel yük teorisine dayalı sistem ile prefrontal korteksinizi aşırı yükten koruyun.',
+        hero: 'Görevlerinizi yazın. AI planlasın. Odaklanın.',
+        f1: 'AI Planlama',
+        f1d: 'Fufit AI görevlerinizi bilimsel temellere göre planlar.',
+        f2: 'Ultradian & Flow',
+        f2d: '90 dk odak, 20 dk reset. Doğal ritminize uyum.',
+        f3: 'Sosyal Odak',
+        f3d: 'Arkadaşlarınızla birlikte çalışın, odalarda odaklanın.',
+        f4: 'İstatistikler',
+        f4d: 'Oturumlarınızı ve odak sürenizi takip edin.',
+        howTitle: 'Nasıl çalışır?',
+        step1: 'Sol panelde görevinizi yazın',
+        step2: 'AI plan oluşturur, kuyruğa eklenir',
+        step3: 'Timer\'ı başlatın, odaklanın',
         login: 'Giriş Yap',
         register: 'Hesap Oluştur',
         footer: 'Bilimsel temellere dayalı odak yönetimi sistemi'
@@ -772,121 +770,159 @@ const App: React.FC = () => {
       en: {
         title: 'FoClock AI',
         subtitle: 'Neural Focus Engine',
+        tagline: 'Scientifically based focus management',
         beta: VERSION.betaLabel,
-        betaMessage: '🎯 Exclusive Access: You\'re among the select few testing this beta version. Your experience and feedback are shaping the future of FoClock AI.',
-        feature1Title: 'AI-Powered Planning',
-        feature1Desc: 'Plan and optimize your tasks based on scientific principles with Fufit AI.',
-        feature2Title: 'Ultradian Rhythms',
-        feature2Desc: 'Align with your natural rhythm with 90-minute deep focus blocks and 20-minute mandatory resets.',
-        feature3Title: 'Flow State Protocol',
-        feature3Desc: 'Protect your prefrontal cortex from overload with a system based on cognitive load theory.',
+        hero: 'Write your tasks. AI plans. You focus.',
+        f1: 'AI Planning',
+        f1d: 'Fufit AI plans your tasks based on science.',
+        f2: 'Ultradian & Flow',
+        f2d: '90 min focus, 20 min reset. Align with your rhythm.',
+        f3: 'Social Focus',
+        f3d: 'Work together with friends, focus in rooms.',
+        f4: 'Analytics',
+        f4d: 'Track sessions and total focus time.',
+        howTitle: 'How it works?',
+        step1: 'Write your task in the left panel',
+        step2: 'AI creates a plan, adds to queue',
+        step3: 'Start the timer, focus',
         login: 'Sign In',
         register: 'Create Account',
         footer: 'Scientifically based focus management system'
       }
     };
-    
     const texts = welcomeTexts[lang];
+    const isDark = theme === 'dark';
 
     return (
-      <div className="h-screen w-screen bg-white flex items-center justify-center p-4 sm:p-6 overflow-y-auto relative" data-theme="light">
-        {/* Language switcher */}
-        <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20">
-          <button 
-            onClick={() => setLang(lang === 'tr' ? 'en' : 'tr')}
-            className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-transparent border border-gray-300 text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all"
-          >
-            {lang === 'tr' ? 'EN' : 'TR'}
-          </button>
-        </div>
-
-        <div className="max-w-4xl w-full relative z-10 py-4">
-          {/* Logo and Title */}
-          <div className="text-center mb-6 sm:mb-8 md:mb-10 animate-fade">
-            <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 bg-black rounded-2xl text-white font-black text-2xl sm:text-3xl mb-4 sm:mb-6">
-              F
+      <div className={`fixed inset-0 w-full overflow-y-auto overscroll-contain transition-colors duration-300 ${isDark ? 'bg-[#0a0a0a]' : 'bg-slate-50'}`} data-theme={theme} lang={lang}>
+        {/* Header - full width */}
+        <header className={`sticky top-0 z-50 w-full border-b backdrop-blur-sm transition-colors duration-300 ${isDark ? 'border-white/10 bg-[#0a0a0a]/95' : 'border-slate-200 bg-white/95'}`}>
+          <div className="mx-auto flex w-full max-w-[1600px] items-center justify-between px-6 py-4 lg:px-12">
+            <div className="flex items-center gap-3">
+              <div className={`flex h-9 w-9 items-center justify-center rounded-lg font-black text-sm ${isDark ? 'bg-white text-black' : 'bg-slate-900 text-white'}`}>F</div>
+              <span className={`font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{texts.title}</span>
             </div>
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-black mb-2 sm:mb-3 tracking-tight">
-              {texts.title}
-            </h1>
-            <p className="text-base sm:text-lg md:text-xl text-gray-600 font-medium mb-3 sm:mb-4">
-              {texts.subtitle}
-            </p>
-            <div className="inline-block px-3 py-1 sm:px-4 sm:py-1.5 bg-black text-white rounded-lg mb-3 sm:mb-4">
-              <p className="text-xs font-bold">
-                {texts.beta}
-              </p>
-            </div>
-            <div className="max-w-lg mx-auto px-4 py-3 sm:px-6 sm:py-4 bg-gray-50 border border-gray-200 rounded-xl">
-              <p className="text-xs sm:text-sm text-gray-700 leading-relaxed font-medium">
-                {texts.betaMessage}
-              </p>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <button onClick={() => setTheme(isDark ? 'light' : 'dark')} className={`rounded-lg p-2 transition-colors ${isDark ? 'text-white/70 hover:bg-white/10 hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`} title={lang === 'tr' ? (isDark ? 'Açık tema' : 'Koyu tema') : (isDark ? 'Light theme' : 'Dark theme')}>
+                {isDark ? (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                ) : (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                )}
+              </button>
+              <button onClick={() => setLang(lang === 'tr' ? 'en' : 'tr')} className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${isDark ? 'border-white/20 text-white/70 hover:bg-white/5 hover:text-white' : 'border-slate-300 text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}>
+                {lang === 'tr' ? 'EN' : 'TR'}
+              </button>
+              <button onClick={() => { setIsLogin(true); setView('auth'); }} className={`rounded-lg border px-4 py-2 text-xs font-semibold transition-colors ${isDark ? 'border-white/20 text-white hover:bg-white/10' : 'border-slate-300 text-slate-800 hover:bg-slate-100'}`}>
+                {texts.login}
+              </button>
+              <button onClick={() => { setIsLogin(false); setView('auth'); }} className={`rounded-lg px-4 py-2 text-xs font-semibold transition-colors ${isDark ? 'bg-white text-black hover:bg-white/90' : 'bg-slate-900 text-white hover:bg-slate-800'}`}>
+                {texts.register}
+              </button>
             </div>
           </div>
+        </header>
 
-          {/* Features Grid */}
-          <div className="grid md:grid-cols-3 gap-4 sm:gap-6 md:gap-8 mb-6 sm:mb-8 md:mb-10 animate-fade" style={{animationDelay: '0.2s'}}>
-            <div className="p-5 sm:p-6 md:p-8 border border-gray-200 rounded-2xl bg-white hover:border-gray-300 transition-all">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-black rounded-xl flex items-center justify-center mb-4 sm:mb-6">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" className="sm:w-5 sm:h-5">
-                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                </svg>
+        {/* Hero - full width */}
+        <section className="w-full px-6 py-16 lg:px-12 lg:py-24">
+          <div className="mx-auto max-w-[1600px]">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-12">
+              <div className="flex-1">
+                <span className="inline-block rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-6">
+                  {texts.beta}
+                </span>
+                <h1 className={`text-4xl font-black tracking-tight sm:text-5xl lg:text-6xl xl:text-7xl ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                  {texts.subtitle}
+                </h1>
+                <p className={`mt-4 max-w-xl text-lg lg:text-xl ${isDark ? 'text-white/60' : 'text-slate-600'}`}>
+                  {texts.hero}
+                </p>
+                <p className={`mt-2 text-sm ${isDark ? 'text-white/40' : 'text-slate-500'}`}>
+                  {texts.tagline}
+                </p>
               </div>
-              <h3 className="text-sm sm:text-base font-bold text-black mb-2 sm:mb-3">{texts.feature1Title}</h3>
-              <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
-                {texts.feature1Desc}
-              </p>
-            </div>
-
-            <div className="p-5 sm:p-6 md:p-8 border border-gray-200 rounded-2xl bg-white hover:border-gray-300 transition-all">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-black rounded-xl flex items-center justify-center mb-4 sm:mb-6">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" className="sm:w-5 sm:h-5">
-                  <circle cx="12" cy="12" r="10"/>
-                  <polyline points="12 6 12 12 16 14"/>
-                </svg>
+              <div className="flex-1 lg:max-w-[55%]">
+                <div className={`overflow-hidden rounded-2xl border shadow-2xl ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
+                  <img src={isDark ? '/assets/tutorial/ana-ekran-dark.png' : '/assets/tutorial/ana-ekran-light.png'} alt="FoClock AI" className="w-full h-auto object-contain" />
+                </div>
               </div>
-              <h3 className="text-sm sm:text-base font-bold text-black mb-2 sm:mb-3">{texts.feature2Title}</h3>
-              <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
-                {texts.feature2Desc}
-              </p>
-            </div>
-
-            <div className="p-5 sm:p-6 md:p-8 border border-gray-200 rounded-2xl bg-white hover:border-gray-300 transition-all">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-black rounded-xl flex items-center justify-center mb-4 sm:mb-6">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" className="sm:w-5 sm:h-5">
-                  <path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-                </svg>
-              </div>
-              <h3 className="text-sm sm:text-base font-bold text-black mb-2 sm:mb-3">{texts.feature3Title}</h3>
-              <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
-                {texts.feature3Desc}
-              </p>
             </div>
           </div>
+        </section>
 
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center animate-fade" style={{animationDelay: '0.4s'}}>
-            <button 
-              onClick={() => { setIsLogin(true); setView('auth'); }} 
-              className="w-full sm:w-auto px-8 sm:px-10 py-3 sm:py-4 bg-black text-white font-bold rounded-xl text-sm transition-all hover:bg-gray-800 active:scale-98"
-            >
-              {texts.login}
-            </button>
-            <button 
-              onClick={() => { setIsLogin(false); setView('auth'); }} 
-              className="w-full sm:w-auto px-8 sm:px-10 py-3 sm:py-4 border border-gray-300 text-black font-bold rounded-xl text-sm transition-all hover:bg-gray-50 active:scale-98"
-            >
-              {texts.register}
-            </button>
+        {/* Features - 4 columns full width */}
+        <section className={`w-full border-t px-6 py-16 lg:px-12 lg:py-20 ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
+          <div className="mx-auto max-w-[1600px]">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {[
+                { title: texts.f1, desc: texts.f1d, icon: <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/> },
+                { title: texts.f2, desc: texts.f2d, icon: <><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></> },
+                { title: texts.f3, desc: texts.f3d, icon: <><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></> },
+                { title: texts.f4, desc: texts.f4d, icon: <path d="M18 20V10M12 20V4M6 20v-6"/> }
+              ].map((f, i) => (
+                <div key={i} className={`rounded-xl border p-6 transition-colors ${isDark ? 'border-white/10 bg-white/[0.02] hover:bg-white/[0.04]' : 'border-slate-200 bg-white hover:bg-slate-50'}`}>
+                  <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-lg ${isDark ? 'bg-white/10' : 'bg-slate-900'}`}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={isDark ? 'white' : 'white'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{f.icon}</svg>
+                  </div>
+                  <h3 className={`font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{f.title}</h3>
+                  <p className={`mt-1 text-sm ${isDark ? 'text-white/50' : 'text-slate-600'}`}>{f.desc}</p>
+                </div>
+              ))}
+            </div>
           </div>
+        </section>
 
-          {/* Footer info */}
-          <div className="mt-6 sm:mt-8 md:mt-10 text-center animate-fade" style={{animationDelay: '0.6s'}}>
-            <p className="text-xs text-gray-400">
+        {/* How it works - full width */}
+        <section className={`w-full border-t px-6 py-16 lg:px-12 lg:py-20 ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
+          <div className="mx-auto max-w-[1600px]">
+            <h2 className={`mb-12 text-center text-sm font-semibold uppercase tracking-widest ${isDark ? 'text-white/50' : 'text-slate-500'}`}>
+              {texts.howTitle}
+            </h2>
+            <div className="flex flex-col lg:flex-row lg:items-stretch gap-8">
+              <div className={`flex-1 overflow-hidden rounded-2xl border ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
+                <img src={isDark ? '/assets/tutorial/ana-ekran-dark.png' : '/assets/tutorial/ana-ekran-light.png'} alt="FoClock AI" className="h-full w-full object-contain" />
+              </div>
+              <div className="flex lg:w-[380px] flex-col justify-center gap-8 lg:shrink-0">
+                {[
+                  { title: texts.step1, hint: lang === 'tr' ? 'Fufit AI hedefini bekliyor... alanına yazın' : 'Type in the Fufit AI input field' },
+                  { title: texts.step2, hint: lang === 'tr' ? 'Kuyruk bölümünde görevlerinizi görün' : 'See your tasks in the queue section' },
+                  { title: texts.step3, hint: lang === 'tr' ? 'Merkezdeki ▶ butonu ile başlatın' : 'Start with the ▶ button in the center' }
+                ].map((s, i) => (
+                  <div key={i} className="flex gap-4">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-sm font-bold text-emerald-600 dark:text-emerald-400">{i + 1}</span>
+                    <div>
+                      <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>{s.title}</h3>
+                      <p className={`mt-1 text-sm ${isDark ? 'text-white/50' : 'text-slate-600'}`}>{s.hint}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* CTA - full width */}
+        <section className={`w-full border-t px-6 py-16 lg:px-12 lg:py-20 ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
+          <div className="mx-auto max-w-[1600px]">
+            <div className="flex flex-col items-center gap-6 sm:flex-row sm:justify-center">
+              <button onClick={() => { setIsLogin(true); setView('auth'); }} className={`w-full rounded-xl border px-8 py-4 font-semibold transition-colors sm:w-auto ${isDark ? 'border-white/20 text-white hover:bg-white/10' : 'border-slate-300 text-slate-800 hover:bg-slate-100'}`}>
+                {texts.login}
+              </button>
+              <button onClick={() => { setIsLogin(false); setView('auth'); }} className={`w-full rounded-xl px-8 py-4 font-semibold transition-colors sm:w-auto ${isDark ? 'bg-white text-black hover:bg-white/90' : 'bg-slate-900 text-white hover:bg-slate-800'}`}>
+                {texts.register}
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* Footer */}
+        <footer className={`w-full border-t px-6 py-8 lg:px-12 ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
+          <div className="mx-auto max-w-[1600px] text-center">
+            <p className={`text-[10px] tracking-widest ${isDark ? 'text-white/30' : 'text-slate-400'}`}>
               {texts.footer}
             </p>
           </div>
-        </div>
+        </footer>
       </div>
     );
   }

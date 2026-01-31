@@ -4,7 +4,7 @@
 
 # 🧠 FoClock AI - Nöral Odak Motoru
 
-**Bilimsel temellere dayalı, AI destekli odak yönetimi sistemi**
+**Beta v1.5** · Bilimsel temellere dayalı, AI destekli odak yönetimi sistemi
 
 FoClock AI, üretkenliğinizi artırmak için tasarlanmış, yapay zeka destekli bir Pomodoro timer ve görev planlama uygulamasıdır. Ultradian ritimler ve Flow State protokolü gibi bilimsel yaklaşımları kullanarak, beyninizin doğal çalışma döngülerine uyum sağlar ve maksimum verimlilik için optimize edilmiş çalışma oturumları oluşturur.
 
@@ -30,7 +30,8 @@ Google Gemini AI entegrasyonu ile görevlerinizi akıllıca planlayın. Sistem, 
 - Tamamlanan oturum özetleri
 
 ### 🎨 Modern ve Minimalist Arayüz
-- Koyu/Açık tema desteği
+- Koyu/Açık tema desteği (varsayılan: açık tema)
+- Karşılama ekranı: tam genişlik, tema geçişi, gerçek uygulama görüntüleri
 - Türkçe ve İngilizce dil seçenekleri
 - Responsive tasarım
 - Akıcı animasyonlar ve geçişler

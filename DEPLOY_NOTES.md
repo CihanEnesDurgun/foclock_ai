@@ -1,26 +1,28 @@
-# Deployment Notes - Version 1.4.0
+# Deployment Notes - Version 1.5.B
 
 ## Release Information
 
-**Version:** 1.4.0  
-**Release Date:** January 26, 2026  
-**Commit:** `f722638`  
+**Version:** 1.5.B (Beta v1.5)  
+**Release Date:** January 31, 2026  
 **Branch:** `main`
 
 ## Changes Summary
 
-This release focuses on documentation improvements and user experience enhancements:
+This release focuses on welcome screen overhaul and user experience improvements:
 
-- **Documentation:** Comprehensive README with project introduction, features overview, and usage guide
-- **Version Update:** Bumped from 1.3.0 to 1.4.0
-- **Changelog:** Updated with new version entry
+- **Welcome Screen:** Complete redesign with modern minimal layout, full-width usage
+- **Theme Support:** Light/dark theme toggle, theme-based screenshots
+- **Splash Removal:** Loading screen removed, direct navigation to welcome
+- **Default Theme:** Light theme set as default for new visitors
 
 ## Frontend Changes
 
 ### Modified Files
-- `README.md` - Added comprehensive project documentation in Turkish
-- `package.json` - Version updated to 1.4.0
-- `CHANGELOG.md` - Added version 1.4.0 entry
+- `App.tsx` - Welcome screen redesign, theme toggle, splash removal
+- `version.ts` - Version updated to 1.5.B
+- `package.json` - Version updated to 1.5.0
+- `CHANGELOG.md` - Added version 1.5.B entry
+- `README.md` - Updated with version 1.5.B and new features
 
 ### No Breaking Changes
 - All existing functionality remains unchanged
