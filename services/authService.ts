@@ -198,6 +198,34 @@ export const authService = {
     await supabase.from('active_sessions').delete().eq('user_id', userId);
   },
 
+  /** Aktif seansı getir. 30 dakikadan eskiyse null döner ve temizlenir. */
+  getActiveSession: async (
+    userId: string
+  ): Promise<{ taskTitle: string; timeRemainingSeconds: number; durationMinutes: number; status: 'running' | 'paused'; updatedAt: string } | null> => {
+    const { data, error } = await supabase
+      .from('active_sessions')
+      .select('task_title, time_remaining_seconds, duration_minutes, status, updated_at')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error || !data) return null;
+
+    const updatedAt = new Date(data.updated_at).getTime();
+    const thirtyMinAgo = Date.now() - 30 * 60 * 1000;
+    if (updatedAt < thirtyMinAgo) {
+      await supabase.from('active_sessions').delete().eq('user_id', userId);
+      return null;
+    }
+
+    return {
+      taskTitle: data.task_title,
+      timeRemainingSeconds: data.time_remaining_seconds,
+      durationMinutes: data.duration_minutes,
+      status: data.status as 'running' | 'paused',
+      updatedAt: data.updated_at,
+    };
+  },
+
   getStats: async (userId: string) => {
     const { data } = await supabase
       .from('sessions')

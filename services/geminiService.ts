@@ -102,6 +102,27 @@ ${userMemory || "Baseline state. No historical data."}
 `;
 };
 
+export const generateChatTitle = async (firstMessage: string, lang: 'tr' | 'en'): Promise<string> => {
+  const prompt =
+    lang === 'tr'
+      ? `Kullanıcının ilk mesajı: "${firstMessage}". Bu mesajdan 2-4 kelimelik kısa, özet bir sohbet başlığı üret. Sadece başlığı yaz, başka hiçbir şey ekleme. Örn: "Vibe Coding", "TÜBİTAK Analizi", "Odak Planlaması".`
+      : `User's first message: "${firstMessage}". Generate a short 2-4 word chat title summarizing this. Output only the title, nothing else. E.g. "Vibe Coding", "Focus Planning".`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: prompt,
+      config: {
+        systemInstruction: 'Output only a short title, 2-4 words. No quotes, no punctuation at end.',
+      },
+    });
+    const title = response.text?.trim().slice(0, 60) || firstMessage.slice(0, 40);
+    return title;
+  } catch {
+    return firstMessage.slice(0, 40) || 'Yeni sohbet';
+  }
+};
+
 export const suggestPlan = async (userInput: string, chatHistory: string, userMemory: string, lang: 'tr' | 'en'): Promise<string> => {
   const prompt = lang === 'tr'
     ? `Geçmiş Konuşma: ${chatHistory}\nKullanıcı girdi: "${userInput}". Eğer bu bir onay ise [EXECUTE_BLUEPRINT] ile bitir. Değilse yeni bir strateji öner.`

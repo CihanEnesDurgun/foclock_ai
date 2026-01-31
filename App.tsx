@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { TimerStatus, PomodoroSession, PlannedTask, TimerMode, ChatMessage, User, FriendActivity, FriendRequest, Room } from './types';
-import { suggestPlan, finalizeTasks, getMotivation, summarizeSession, formatMessage } from './services/geminiService';
+import { suggestPlan, finalizeTasks, getMotivation, summarizeSession, formatMessage, generateChatTitle } from './services/geminiService';
 import { authService } from './services/authService';
 import { getFriendActivities } from './services/friendActivityService';
 import {
@@ -145,6 +145,16 @@ const App: React.FC = () => {
           const userStats = await authService.getStats(session.id);
           setStats(userStats);
           setView('home');
+
+          if (session.id !== DEMO_USER_ID) {
+            const active = await authService.getActiveSession(session.id);
+            if (active) {
+              setCurrentTask(active.taskTitle);
+              setTimeLeft(active.timeRemainingSeconds);
+              setSessionDuration(active.durationMinutes * 60);
+              setStatus(TimerStatus.PAUSED);
+            }
+          }
         } else {
           setTimeout(() => setView('welcome'), 1000);
         }
@@ -434,6 +444,13 @@ const App: React.FC = () => {
           const userStats = await authService.getStats(res.user!.id);
           setStats(userStats);
           setView('home');
+          const active = await authService.getActiveSession(res.user!.id);
+          if (active) {
+            setCurrentTask(active.taskTitle);
+            setTimeLeft(active.timeRemainingSeconds);
+            setSessionDuration(active.durationMinutes * 60);
+            setStatus(TimerStatus.PAUSED);
+          }
         } else {
           setAuthError(res.error ?? '');
         }
@@ -644,7 +661,7 @@ const App: React.FC = () => {
       if (convId && !isDemo) {
         await addMessage(convId, 'user', input);
         if (chatMessages.length === 0) {
-          updateConversationTitle(convId, input.slice(0, 80) || t.newChat);
+          generateChatTitle(input, lang).then((title) => updateConversationTitle(convId!, title || t.newChat));
         }
       }
 
@@ -979,27 +996,24 @@ const App: React.FC = () => {
             </svg>
           </button>
           <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-bright)] flex-1 text-center">{t.architectTitle}</span>
-          <button
-            type="button"
-            onClick={handleNewChat}
-            className="text-[9px] font-bold uppercase tracking-wider text-[var(--text-dim)] hover:text-[var(--text-bright)] transition-colors px-2 py-1"
-          >
-            {t.newChat}
-          </button>
-        </div>
-        {chatHistoryPanelOpen && (
-          <div className="absolute left-0 top-[52px] bottom-0 w-[280px] z-30 bg-[var(--bg-sidebar)] border-r border-[var(--border)] shadow-xl flex flex-col overflow-hidden">
-            <div className="p-3 border-b border-[var(--border)]">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-[var(--text-bright)] mb-2">{t.chatHistory}</h3>
+          <div className="w-[72px] shrink-0 flex justify-end">
+            {!chatHistoryPanelOpen && (
               <button
                 type="button"
                 onClick={handleNewChat}
-                className="w-full py-2.5 text-[10px] font-bold uppercase tracking-wider border border-[var(--border)] rounded-xl hover:bg-white/5 transition-colors"
+                className="text-[9px] font-bold uppercase tracking-wider text-[var(--text-dim)] hover:text-[var(--text-bright)] transition-colors px-2 py-1"
               >
-                + {t.newChat}
+                {t.newChat}
               </button>
+            )}
+          </div>
+        </div>
+        {chatHistoryPanelOpen && (
+          <div className="absolute left-0 top-[52px] bottom-0 w-[280px] z-30 bg-[var(--bg-sidebar)] border-r border-[var(--border)] shadow-xl flex flex-col overflow-hidden">
+            <div className="p-3 border-b border-[var(--border)] shrink-0">
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-[var(--text-bright)]">{t.chatHistory}</h3>
             </div>
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-2 min-h-0">
               {user?.id === DEMO_USER_ID ? (
                 <p className="text-[10px] text-[var(--text-dim)] italic px-2 py-4">{t.chatHistoryLoginHint}</p>
               ) : loadingChatHistory ? (
@@ -1025,6 +1039,15 @@ const App: React.FC = () => {
                   </button>
                 ))
               )}
+            </div>
+            <div className="p-3 border-t border-[var(--border)] shrink-0">
+              <button
+                type="button"
+                onClick={handleNewChat}
+                className="w-full py-2.5 text-[10px] font-bold uppercase tracking-wider border border-[var(--border)] rounded-xl hover:bg-white/5 transition-colors"
+              >
+                + {t.newChat}
+              </button>
             </div>
           </div>
         )}
