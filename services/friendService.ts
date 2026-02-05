@@ -152,7 +152,7 @@ export async function getFriends(userId: string): Promise<Friend[]> {
     }));
   }
 
-  return (data ?? []).map((r: { id: string; username: string | null; name: string }) => ({
+  return (data ?? []).map((r: { id: string; username: string | null; name: string; last_seen_at?: string | null }) => ({
     id: r.id,
     username: r.username,
     name: r.name,

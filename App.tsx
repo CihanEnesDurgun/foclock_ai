@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
+import mascotPoster from './mascotbird/saksagan.PNG';
 import { TimerStatus, PomodoroSession, PlannedTask, TimerMode, ChatMessage, User, FriendActivity, FriendRequest, Room } from './types';
 import { suggestPlan, finalizeTasks, getMotivation, summarizeSession, formatMessage, generateChatTitle, extractNewInsights } from './services/geminiService';
 import { authService } from './services/authService';
-import { getFriendActivities } from './services/friendActivityService';
 import {
   checkUsernameAvailable,
   validateUsername,
@@ -18,6 +18,8 @@ import {
   type Friend,
 } from './services/friendService';
 import { sendPairInvite, getPendingPairInvites, acceptPairInvite, rejectPairInvite, endPairWith, getPairedFriendId, type PairInvite } from './services/pairService';
+import { updateLastSeen } from './services/presenceService';
+import { getFriendActivities, ONLINE_THRESHOLD_MS } from './services/friendActivityService';
 import {
   createRoom,
   joinRoomByCode,
@@ -119,7 +121,19 @@ const App: React.FC = () => {
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const mascotVideoRef = useRef<HTMLVideoElement>(null);
   const t = locales[lang];
+
+  // El sallama maskot videoyu oynat (tarayıcı izin verirse)
+  useEffect(() => {
+    if (view !== 'home') return;
+    const v = mascotVideoRef.current;
+    if (!v) return;
+    const play = () => v.play().catch(() => {});
+    play();
+    v.addEventListener('loadeddata', play);
+    return () => v.removeEventListener('loadeddata', play);
+  }, [view, sidebarModule]);
 
   // Ses efektleri (opsiyonel ama beta hissi için önemli)
   const playAlert = () => {
@@ -181,6 +195,14 @@ const App: React.FC = () => {
     }, ROTATION_INTERVAL_MS);
     return () => clearInterval(id);
   }, [view, lang]);
+
+  // Son görülme / aktif: ana ekrandayken heartbeat (arkadaşlara "aktif" görünür)
+  useEffect(() => {
+    if (view !== 'home' || !user || user.id === DEMO_USER_ID) return;
+    updateLastSeen();
+    const id = setInterval(updateLastSeen, 45000);
+    return () => clearInterval(id);
+  }, [view, user?.id]);
 
   // Arkadaş etkinliği: sağ menüde social açıldığında veri çek + gerçek zamanlı güncelleme
   useEffect(() => {
@@ -1220,7 +1242,7 @@ const App: React.FC = () => {
           </div>
           <button onClick={() => authService.logout().then(() => { setUser(null); setView('auth'); })} className="p-2 rounded-lg hover:bg-red-500/10 text-red-500 transition-all shrink-0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg></button>
         </div>
-         <div className="sidebar-content px-6 py-8">
+         <div className="sidebar-content px-6 py-8 flex-1 flex flex-col min-h-0">
             {sidebarModule === 'analytics' ? (
                <div className="animate-fade">
                   <div className="flex items-center justify-between mb-8">
@@ -1278,28 +1300,26 @@ const App: React.FC = () => {
                 ) : (
                   <div className="space-y-3">
                     {friendActivities.map((fa) => {
-                      const isActive = fa.status === 'flow';
+                      const isFlow = fa.status === 'flow';
                       const isPaused = fa.status === 'paused';
                       const elapsed = fa.totalDuration > 0 ? Math.floor((fa.totalDuration - fa.timeRemaining) / 60) : 0;
                       const totalMins = Math.floor(fa.totalDuration / 60);
                       const progress = fa.totalDuration > 0 ? (fa.totalDuration - fa.timeRemaining) / fa.totalDuration : 0;
-                      
-                      // Calculate time ago for inactive sessions (idle only, not paused)
-                      let timeAgo = '';
-                      if (!isActive && !isPaused && fa.lastSeen) {
-                        const lastSeenDate = new Date(fa.lastSeen);
-                        const minutesAgo = Math.floor((Date.now() - lastSeenDate.getTime()) / (1000 * 60));
-                        if (minutesAgo < 60) {
-                          timeAgo = `${minutesAgo}m ago`;
-                        } else {
-                          const hoursAgo = Math.floor(minutesAgo / 60);
-                          timeAgo = `${hoursAgo}h ago`;
-                        }
-                      }
-                      
+                      const isOnline = fa.lastSeen && (Date.now() - new Date(fa.lastSeen).getTime() < ONLINE_THRESHOLD_MS);
                       const isPairedWithMe = fa.pairedWith === user?.id;
-                      const canWorkTogether = (isActive || isPaused) && !isPairedWithMe && user?.id !== DEMO_USER_ID;
+                      const canWorkTogether = (isFlow || isPaused) && !isPairedWithMe && user?.id !== DEMO_USER_ID;
                       const inviteSent = invitedFriendIds.includes(fa.id);
+                      let lastSeenText = '';
+                      if (fa.lastSeen) {
+                        const ms = Date.now() - new Date(fa.lastSeen).getTime();
+                        const min = Math.floor(ms / (1000 * 60));
+                        const hour = Math.floor(min / 60);
+                        const day = Math.floor(hour / 24);
+                        if (min < 2) lastSeenText = `${t.lastSeenLabel} ${t.lastSeenNow}`;
+                        else if (min < 60) lastSeenText = `${t.lastSeenLabel} ${min} ${t.lastSeenMinAgo}`;
+                        else if (hour < 24) lastSeenText = `${t.lastSeenLabel} ${hour} ${t.lastSeenHourAgo}`;
+                        else lastSeenText = `${t.lastSeenLabel} ${day} ${t.lastSeenDayAgo}`;
+                      }
                       return (
                         <div key={fa.id} className="p-2.5 border border-[var(--border)] rounded-xl bg-white/5 relative">
                           <div className="flex items-center gap-2.5">
@@ -1307,31 +1327,34 @@ const App: React.FC = () => {
                               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-white/20 to-white/5 flex items-center justify-center text-[11px] font-black text-[var(--text-bright)]">
                                 {fa.name[0]}
                               </div>
-                              {isActive && (
+                              {isFlow && (
                                 <div className="absolute -bottom-0.5 -left-0.5 w-2.5 h-2.5 rounded-full bg-[var(--status-flow)] animate-pulse shadow-[0_0_6px_rgba(34,197,94,0.6)] border border-[var(--bg)]"></div>
                               )}
                               {isPaused && (
                                 <div className="absolute -bottom-0.5 -left-0.5 w-2.5 h-2.5 rounded-full bg-amber-500 border border-[var(--bg)]"></div>
                               )}
-                              {!isActive && !isPaused && fa.lastSeen && (
-                                <div className="absolute -bottom-0.5 -left-0.5 w-2 h-2 rounded-full bg-orange-500 border border-[var(--bg)]"></div>
+                              {!isFlow && !isPaused && isOnline && (
+                                <div className="absolute -bottom-0.5 -left-0.5 w-2.5 h-2.5 rounded-full bg-[var(--status-flow)] animate-pulse border border-[var(--bg)]"></div>
                               )}
-                              {!isActive && !isPaused && !fa.lastSeen && (
+                              {!isFlow && !isPaused && !isOnline && fa.lastSeen && (
                                 <div className="absolute -bottom-0.5 -left-0.5 w-2 h-2 rounded-full bg-[var(--text-dim)] border border-[var(--bg)]"></div>
+                              )}
+                              {!isFlow && !isPaused && !fa.lastSeen && (
+                                <div className="absolute -bottom-0.5 -left-0.5 w-2 h-2 rounded-full bg-[var(--text-dim)] opacity-50 border border-[var(--bg)]"></div>
                               )}
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center justify-between gap-2 mb-0.5">
                                 <div className="text-[10px] font-black uppercase tracking-tight text-[var(--text-bright)] truncate">{fa.name}</div>
                                 <span className="text-[9px] font-bold text-[var(--text-dim)] shrink-0">
-                                  {isActive ? `${elapsed}m` : isPaused ? `${t.paused} ${elapsed}m` : totalMins > 0 ? `${totalMins}m` : ''}
+                                  {isFlow ? `${elapsed}m` : isPaused ? `${t.paused} ${elapsed}m` : isOnline ? t.active : totalMins > 0 ? `${totalMins}m` : ''}
                                 </span>
                               </div>
                               {isPairedWithMe && (
                                 <div className="text-[8px] text-[var(--status-flow)] font-bold mb-1">{fa.name} {t.workingWith}</div>
                               )}
                               <div className="text-[9px] text-[var(--text-dim)] truncate mb-1.5">{fa.activity || (lang === 'tr' ? 'Boş' : 'Empty')}</div>
-                              {(isActive || isPaused) && fa.totalDuration > 0 && (
+                              {(isFlow || isPaused) && fa.totalDuration > 0 && (
                                 <div className="h-0.5 bg-[var(--border)] rounded-full overflow-hidden">
                                   <div 
                                     className="h-full bg-[var(--status-flow)] transition-all duration-500"
@@ -1339,8 +1362,8 @@ const App: React.FC = () => {
                                   ></div>
                                 </div>
                               )}
-                              {timeAgo && !isActive && !isPaused && (
-                                <div className="text-[8px] text-[var(--text-dim)] mt-1">{timeAgo}</div>
+                              {lastSeenText && (
+                                <div className="text-[8px] text-[var(--text-dim)] mt-1">{lastSeenText}</div>
                               )}
                               {canWorkTogether && (
                                 <button onClick={() => handleWorkTogetherInvite(fa.id)} disabled={inviteSent} className="mt-2 w-full py-1.5 rounded-lg bg-[var(--status-flow)]/20 border border-[var(--status-flow)] text-[var(--status-flow)] text-[9px] font-black uppercase hover:bg-[var(--status-flow)]/30 transition-all disabled:opacity-70">
@@ -1597,8 +1620,8 @@ const App: React.FC = () => {
                 <button className="w-full mt-10 py-4 bg-[var(--accent)] text-[var(--accent-text)] rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg" onClick={() => setSidebarModule('default')}>Tercihleri Uygula</button>
               </div>
             ) : (
-              <div className="flex flex-col gap-4 animate-fade">
-                <nav className="flex flex-col gap-3">
+              <div className="flex flex-col gap-4 animate-fade flex-1 min-h-0">
+                <nav className="flex flex-col gap-3 shrink-0">
                     <button className="btn-nav py-5 px-6 border border-[var(--border)] rounded-[1.5rem] hover:shadow-md" onClick={() => setSidebarModule('analytics')}>
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
                       {t.history}
@@ -1620,6 +1643,22 @@ const App: React.FC = () => {
                       {t.settings}
                     </button>
                 </nav>
+                <div className="flex-1 min-h-[100px] flex flex-col items-center justify-end pb-1" aria-hidden>
+                  <video
+                    ref={mascotVideoRef}
+                    poster={mascotPoster}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    preload="auto"
+                    className="w-40 h-40 object-contain select-none pointer-events-none rounded-lg"
+                    aria-hidden
+                  >
+                    <source src="/mascotbird/saksagan_elsallama.mp4" type="video/mp4" />
+                    <source src="/mascotbird/saksagan_elsallama.mov" type="video/quicktime" />
+                  </video>
+                </div>
               </div>
             )}
          </div>
