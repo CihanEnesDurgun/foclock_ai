@@ -104,6 +104,9 @@ const App: React.FC = () => {
   const [pairedFriendActivity, setPairedFriendActivity] = useState<FriendActivity | null>(null);
   const [pendingPairInvites, setPendingPairInvites] = useState<PairInvite[]>([]);
   const [invitedFriendIds, setInvitedFriendIds] = useState<string[]>([]);
+  const [selectedFriendIdForAction, setSelectedFriendIdForAction] = useState<string | null>(null);
+  const [dismissedPairInviteIds, setDismissedPairInviteIds] = useState<Set<string>>(new Set());
+  const pairInviteNotificationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [myRooms, setMyRooms] = useState<Room[]>([]);
   const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
   const [loadingRooms, setLoadingRooms] = useState(false);
@@ -266,6 +269,23 @@ const App: React.FC = () => {
     const id = setInterval(() => getPendingPairInvites(user.id).then(setPendingPairInvites), 3000);
     return () => clearInterval(id);
   }, [user?.id]);
+
+  // Birlikte çalışma daveti bildirimi: tepki verilmezse 20 sn sonra otomatik kapan
+  useEffect(() => {
+    const visible = pendingPairInvites.filter((inv) => !dismissedPairInviteIds.has(inv.id));
+    const first = visible[0];
+    if (pairInviteNotificationTimerRef.current) {
+      clearTimeout(pairInviteNotificationTimerRef.current);
+      pairInviteNotificationTimerRef.current = null;
+    }
+    if (!first || !user || user.id === DEMO_USER_ID) return;
+    pairInviteNotificationTimerRef.current = setTimeout(() => {
+      setDismissedPairInviteIds((prev) => new Set(prev).add(first.id));
+    }, 20000);
+    return () => {
+      if (pairInviteNotificationTimerRef.current) clearTimeout(pairInviteNotificationTimerRef.current);
+    };
+  }, [pendingPairInvites, dismissedPairInviteIds, user?.id]);
 
   // Birlikte Çalış: eşleşmiş arkadaşın oturumunu yükle (widget için)
   useEffect(() => {
@@ -1066,7 +1086,26 @@ const App: React.FC = () => {
             </svg>
           </button>
           <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-bright)] flex-1 text-center">{t.architectTitle}</span>
-          <div className="w-[72px] shrink-0 flex justify-end">
+          <div className="shrink-0 flex items-start justify-end gap-2 min-w-0">
+            {view === 'home' && user?.id !== DEMO_USER_ID && (() => {
+              const visibleInvites = pendingPairInvites.filter((inv) => !dismissedPairInviteIds.has(inv.id));
+              const firstInvite = visibleInvites[0];
+              return firstInvite ? (
+                <div className="animate-fade rounded-xl border border-[var(--status-flow)] bg-[var(--status-flow)]/10 p-3 shadow-lg max-w-[200px]">
+                  <p className="text-[10px] font-bold text-[var(--text-bright)] mb-2">
+                    {firstInvite.fromName} {t.workWithYouInvite}
+                  </p>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => { handleAcceptPairInvite(firstInvite.id); setDismissedPairInviteIds((p) => new Set(p).add(firstInvite.id)); }} className="flex-1 py-1.5 rounded-lg bg-[var(--status-flow)] text-white text-[9px] font-black uppercase">
+                      {t.pairInviteAccept}
+                    </button>
+                    <button type="button" onClick={() => { handleRejectPairInvite(firstInvite.id); setDismissedPairInviteIds((p) => new Set(p).add(firstInvite.id)); }} className="flex-1 py-1.5 rounded-lg border border-[var(--border)] text-[9px] font-bold uppercase hover:bg-white/5">
+                      {t.pairInviteReject}
+                    </button>
+                  </div>
+                </div>
+              ) : null;
+            })()}
             {!chatHistoryPanelOpen && (
               <button
                 type="button"
@@ -1306,8 +1345,9 @@ const App: React.FC = () => {
                       const progress = fa.totalDuration > 0 ? (fa.totalDuration - fa.timeRemaining) / fa.totalDuration : 0;
                       const isOnline = fa.lastSeen && (Date.now() - new Date(fa.lastSeen).getTime() < ONLINE_THRESHOLD_MS);
                       const isPairedWithMe = fa.pairedWith === user?.id;
-                      const canWorkTogether = (isFlow || isPaused) && !isPairedWithMe && user?.id !== DEMO_USER_ID;
                       const inviteSent = invitedFriendIds.includes(fa.id);
+                      const showInviteInPopover = !isPairedWithMe && user?.id !== DEMO_USER_ID;
+                      const isPopoverOpen = selectedFriendIdForAction === fa.id;
                       let lastSeenText = '';
                       if (fa.lastSeen) {
                         const ms = Date.now() - new Date(fa.lastSeen).getTime();
@@ -1320,7 +1360,14 @@ const App: React.FC = () => {
                         else lastSeenText = `${t.lastSeenLabel} ${day} ${t.lastSeenDayAgo}`;
                       }
                       return (
-                        <div key={fa.id} className="p-2.5 border border-[var(--border)] rounded-xl bg-white/5 relative">
+                        <div
+                          key={fa.id}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => setSelectedFriendIdForAction((prev) => (prev === fa.id ? null : fa.id))}
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedFriendIdForAction((prev) => (prev === fa.id ? null : fa.id)); } }}
+                          className="p-2.5 border border-[var(--border)] rounded-xl bg-white/5 relative cursor-pointer hover:bg-white/[0.07] transition-colors"
+                        >
                           <div className="flex items-center gap-2.5">
                             <div className="relative shrink-0">
                               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-white/20 to-white/5 flex items-center justify-center text-[11px] font-black text-[var(--text-bright)]">
@@ -1364,13 +1411,34 @@ const App: React.FC = () => {
                                   ></div>
                                 </div>
                               )}
-                              {canWorkTogether && (
-                                <button onClick={() => handleWorkTogetherInvite(fa.id)} disabled={inviteSent} className="mt-2 w-full py-1.5 rounded-lg bg-[var(--status-flow)]/20 border border-[var(--status-flow)] text-[var(--status-flow)] text-[9px] font-black uppercase hover:bg-[var(--status-flow)]/30 transition-all disabled:opacity-70">
-                                  {inviteSent ? t.inviteSent : t.workTogetherInvite}
+                            </div>
+                          </div>
+                          {isPopoverOpen && (
+                            <div
+                              className="mt-2 pt-2 border-t border-[var(--border)] animate-fade"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {showInviteInPopover ? (
+                                <div className="space-y-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => { handleWorkTogetherInvite(fa.id); setSelectedFriendIdForAction(null); }}
+                                    disabled={inviteSent}
+                                    className="w-full py-2 rounded-lg bg-[var(--status-flow)]/20 border border-[var(--status-flow)] text-[var(--status-flow)] text-[9px] font-black uppercase hover:bg-[var(--status-flow)]/30 transition-all disabled:opacity-70 disabled:cursor-default"
+                                  >
+                                    {inviteSent ? t.inviteSent : t.inviteWorkTogether}
+                                  </button>
+                                  <button type="button" onClick={() => setSelectedFriendIdForAction(null)} className="w-full py-1.5 rounded-lg border border-[var(--border)] text-[9px] font-bold text-[var(--text-dim)] hover:bg-white/5">
+                                    {t.back}
+                                  </button>
+                                </div>
+                              ) : (
+                                <button type="button" onClick={() => setSelectedFriendIdForAction(null)} className="w-full py-1.5 rounded-lg border border-[var(--border)] text-[9px] font-bold text-[var(--text-dim)] hover:bg-white/5">
+                                  {t.back}
                                 </button>
                               )}
                             </div>
-                          </div>
+                          )}
                         </div>
                       );
                     })}
