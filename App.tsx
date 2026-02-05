@@ -1354,7 +1354,7 @@ const App: React.FC = () => {
                               )}
                               <div className="flex items-center justify-between gap-2 mb-1.5">
                                 <span className="text-[9px] text-[var(--text-dim)] truncate flex-1 min-w-0">{fa.activity || (lang === 'tr' ? 'Boş' : 'Empty')}</span>
-                                {lastSeenText && <span className="text-[8px] text-[var(--text-dim)] shrink-0">{lastSeenText}</span>}
+                                {lastSeenText && !isOnline && <span className="text-[8px] text-[var(--text-dim)] shrink-0">{lastSeenText}</span>}
                               </div>
                               {(isFlow || isPaused) && fa.totalDuration > 0 && (
                                 <div className="h-0.5 bg-[var(--border)] rounded-full overflow-hidden">
