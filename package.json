@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "mascot:convert": "echo MP4 icin: ffmpeg -y -i mascotbird/saksagan_elsallama.mov -c:v libx264 -movflags +faststart public/mascotbird/saksagan_elsallama.mp4"
   },
   "dependencies": {
     "@google/genai": "^1.34.0",

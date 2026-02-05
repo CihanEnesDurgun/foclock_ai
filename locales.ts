@@ -109,6 +109,13 @@ export const locales = {
     noChatsYet: "Henüz sohbet yok.",
     continueChat: "Sohbete devam et",
     chatHistoryLoginHint: "Giriş yapın, sohbet geçmişiniz kaydedilsin.",
+    lastSeenLabel: "Son görülme",
+    lastSeenNow: "şimdi",
+    lastSeenMinAgo: "dk önce",
+    lastSeenHourAgo: "saat önce",
+    lastSeenDayAgo: "gün önce",
+    active: "Aktif",
+    paused: "Durduruldu",
     status: { IDLE: "HAZIR", RUNNING: "AKIŞTA", PAUSED: "DURAKLADI", COMPLETED: "TAMAMLANDI" }
   },
   en: {
@@ -221,6 +228,12 @@ export const locales = {
     noChatsYet: "No chats yet.",
     continueChat: "Continue chat",
     chatHistoryLoginHint: "Sign in to save your chat history.",
+    lastSeenLabel: "Last seen",
+    lastSeenNow: "now",
+    lastSeenMinAgo: "min ago",
+    lastSeenHourAgo: "hr ago",
+    lastSeenDayAgo: "days ago",
+    active: "Active",
     status: { IDLE: "READY", RUNNING: "FLOWING", PAUSED: "PAUSED", COMPLETED: "COMPLETED" }
   }
 };
