@@ -1352,7 +1352,10 @@ const App: React.FC = () => {
                               {isPairedWithMe && (
                                 <div className="text-[8px] text-[var(--status-flow)] font-bold mb-1">{fa.name} {t.workingWith}</div>
                               )}
-                              <div className="text-[9px] text-[var(--text-dim)] truncate mb-1.5">{fa.activity || (lang === 'tr' ? 'Boş' : 'Empty')}</div>
+                              <div className="flex items-center justify-between gap-2 mb-1.5">
+                                <span className="text-[9px] text-[var(--text-dim)] truncate flex-1 min-w-0">{fa.activity || (lang === 'tr' ? 'Boş' : 'Empty')}</span>
+                                {lastSeenText && <span className="text-[8px] text-[var(--text-dim)] shrink-0">{lastSeenText}</span>}
+                              </div>
                               {(isFlow || isPaused) && fa.totalDuration > 0 && (
                                 <div className="h-0.5 bg-[var(--border)] rounded-full overflow-hidden">
                                   <div 
@@ -1360,9 +1363,6 @@ const App: React.FC = () => {
                                     style={{ width: `${progress * 100}%` }}
                                   ></div>
                                 </div>
-                              )}
-                              {lastSeenText && (
-                                <div className="text-[8px] text-[var(--text-dim)] mt-1">{lastSeenText}</div>
                               )}
                               {canWorkTogether && (
                                 <button onClick={() => handleWorkTogetherInvite(fa.id)} disabled={inviteSent} className="mt-2 w-full py-1.5 rounded-lg bg-[var(--status-flow)]/20 border border-[var(--status-flow)] text-[var(--status-flow)] text-[9px] font-black uppercase hover:bg-[var(--status-flow)]/30 transition-all disabled:opacity-70">
