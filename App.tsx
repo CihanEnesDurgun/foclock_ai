@@ -1,6 +1,5 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import mascotPoster from './mascotbird/saksagan.PNG';
 import { TimerStatus, PomodoroSession, PlannedTask, TimerMode, ChatMessage, User, FriendActivity, FriendRequest, Room } from './types';
 import { suggestPlan, finalizeTasks, getMotivation, summarizeSession, formatMessage, generateChatTitle, extractNewInsights } from './services/geminiService';
 import { authService } from './services/authService';
@@ -1646,7 +1645,7 @@ const App: React.FC = () => {
                 <div className="flex-1 min-h-[100px] flex flex-col items-center justify-end pb-1" aria-hidden>
                   <video
                     ref={mascotVideoRef}
-                    poster={mascotPoster}
+                    poster="/mascotbird/saksagan.PNG"
                     autoPlay
                     loop
                     muted
