@@ -1086,26 +1086,7 @@ const App: React.FC = () => {
             </svg>
           </button>
           <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-bright)] flex-1 text-center">{t.architectTitle}</span>
-          <div className="shrink-0 flex items-start justify-end gap-2 min-w-0">
-            {view === 'home' && user?.id !== DEMO_USER_ID && (() => {
-              const visibleInvites = pendingPairInvites.filter((inv) => !dismissedPairInviteIds.has(inv.id));
-              const firstInvite = visibleInvites[0];
-              return firstInvite ? (
-                <div className="animate-fade rounded-xl border border-[var(--status-flow)] bg-[var(--status-flow)]/10 p-3 shadow-lg max-w-[200px]">
-                  <p className="text-[10px] font-bold text-[var(--text-bright)] mb-2">
-                    {firstInvite.fromName} {t.workWithYouInvite}
-                  </p>
-                  <div className="flex gap-2">
-                    <button type="button" onClick={() => { handleAcceptPairInvite(firstInvite.id); setDismissedPairInviteIds((p) => new Set(p).add(firstInvite.id)); }} className="flex-1 py-1.5 rounded-lg bg-[var(--status-flow)] text-white text-[9px] font-black uppercase">
-                      {t.pairInviteAccept}
-                    </button>
-                    <button type="button" onClick={() => { handleRejectPairInvite(firstInvite.id); setDismissedPairInviteIds((p) => new Set(p).add(firstInvite.id)); }} className="flex-1 py-1.5 rounded-lg border border-[var(--border)] text-[9px] font-bold uppercase hover:bg-white/5">
-                      {t.pairInviteReject}
-                    </button>
-                  </div>
-                </div>
-              ) : null;
-            })()}
+          <div className="w-[72px] shrink-0 flex justify-end">
             {!chatHistoryPanelOpen && (
               <button
                 type="button"
@@ -1237,6 +1218,25 @@ const App: React.FC = () => {
 
       <main className="main-focus">
         <div className="watermark">{VERSION.watermark}</div>
+        {view === 'home' && user?.id !== DEMO_USER_ID && (() => {
+          const visibleInvites = pendingPairInvites.filter((inv) => !dismissedPairInviteIds.has(inv.id));
+          const firstInvite = visibleInvites[0];
+          return firstInvite ? (
+            <div className="absolute left-6 top-6 z-20 animate-fade rounded-xl border border-[var(--status-flow)] bg-[var(--status-flow)]/10 p-3 shadow-lg max-w-[220px]">
+              <p className="text-[10px] font-bold text-[var(--text-bright)] mb-2">
+                {firstInvite.fromName} {t.workWithYouInvite}
+              </p>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => { handleAcceptPairInvite(firstInvite.id); setDismissedPairInviteIds((p) => new Set(p).add(firstInvite.id)); }} className="flex-1 py-1.5 rounded-lg bg-[var(--status-flow)] text-white text-[9px] font-black uppercase">
+                  {t.pairInviteAccept}
+                </button>
+                <button type="button" onClick={() => { handleRejectPairInvite(firstInvite.id); setDismissedPairInviteIds((p) => new Set(p).add(firstInvite.id)); }} className="flex-1 py-1.5 rounded-lg border border-[var(--border)] text-[9px] font-bold uppercase hover:bg-white/5">
+                  {t.pairInviteReject}
+                </button>
+              </div>
+            </div>
+          ) : null;
+        })()}
         <div className="absolute left-1/2 top-[68px] z-10 -translate-x-1/2 text-[11px] font-black uppercase tracking-[0.5em] text-[var(--text-bright)] drop-shadow-sm">{currentTask || "SİSTEM HAZIR"}</div>
         <div className="flex flex-1 flex-col items-center justify-center">
             <div className="timer-container">
@@ -1306,20 +1306,6 @@ const App: React.FC = () => {
                 <div className="flex items-center justify-between mb-8">
                   <h4 className="text-[11px] font-black text-[var(--text-dim)] uppercase tracking-widest">{t.social}</h4>
                 </div>
-                {pendingPairInvites.length > 0 && user?.id !== DEMO_USER_ID && (
-                  <div className="mb-6 space-y-2">
-                    <p className="text-[10px] font-bold text-[var(--text-dim)] uppercase">{lang === 'tr' ? 'Birlikte çalışma davetleri' : 'Work together invites'}</p>
-                    {pendingPairInvites.map((inv) => (
-                      <div key={inv.id} className="p-3 border border-[var(--status-flow)] rounded-xl bg-[var(--status-flow)]/10 flex items-center justify-between gap-2">
-                        <span className="text-[10px] font-bold truncate flex-1">{inv.fromName} {t.pairInviteFrom}</span>
-                        <div className="flex gap-1 shrink-0">
-                          <button onClick={() => handleAcceptPairInvite(inv.id)} className="px-2 py-1 rounded bg-[var(--status-flow)] text-white text-[9px] font-black">{t.pairInviteAccept}</button>
-                          <button onClick={() => handleRejectPairInvite(inv.id)} className="px-2 py-1 rounded border border-[var(--border)] text-[9px] font-bold hover:bg-white/5">{t.pairInviteReject}</button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
                 {pairedWithUserId && user?.id !== DEMO_USER_ID && (
                   <div className="mb-6 p-3 border border-[var(--status-flow)] rounded-xl bg-[var(--status-flow)]/10">
                     <p className="text-[10px] font-bold text-[var(--status-flow)] mb-2">{friendActivities.find(a => a.id === pairedWithUserId)?.name ?? friends.find(f => f.id === pairedWithUserId)?.name ?? ''} {t.workingWith}</p>
@@ -1346,6 +1332,7 @@ const App: React.FC = () => {
                       const isOnline = fa.lastSeen && (Date.now() - new Date(fa.lastSeen).getTime() < ONLINE_THRESHOLD_MS);
                       const isPairedWithMe = fa.pairedWith === user?.id;
                       const inviteSent = invitedFriendIds.includes(fa.id);
+                      const pendingFromThisFriend = pendingPairInvites.find((inv) => inv.fromUserId === fa.id);
                       const showInviteInPopover = !isPairedWithMe && user?.id !== DEMO_USER_ID;
                       const isPopoverOpen = selectedFriendIdForAction === fa.id;
                       let lastSeenText = '';
@@ -1413,6 +1400,27 @@ const App: React.FC = () => {
                               )}
                             </div>
                           </div>
+                          {pendingFromThisFriend && (
+                            <div className="mt-2 pt-2 border-t border-[var(--border)] flex flex-col gap-1.5" onClick={(e) => e.stopPropagation()}>
+                              <p className="text-[9px] text-[var(--text-dim)]">{fa.name} {t.workWithYouInvite}</p>
+                              <div className="flex gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => { handleAcceptPairInvite(pendingFromThisFriend.id); setSelectedFriendIdForAction(null); }}
+                                  className="flex-1 py-1.5 rounded-lg bg-[var(--status-flow)]/20 border border-[var(--status-flow)] text-[var(--status-flow)] text-[9px] font-black uppercase hover:bg-[var(--status-flow)]/30"
+                                >
+                                  {t.pairInviteAccept}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => { handleRejectPairInvite(pendingFromThisFriend.id); setSelectedFriendIdForAction(null); }}
+                                  className="flex-1 py-1.5 rounded-lg border border-[var(--border)] text-[9px] font-bold text-[var(--text-dim)] hover:bg-white/5"
+                                >
+                                  {t.pairInviteReject}
+                                </button>
+                              </div>
+                            </div>
+                          )}
                           {isPopoverOpen && (
                             <div
                               className="mt-2 pt-2 border-t border-[var(--border)] animate-fade"
