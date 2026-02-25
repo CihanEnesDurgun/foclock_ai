@@ -44,6 +44,8 @@ import { locales } from './locales';
 import { getQuote, quoteCount, ROTATION_INTERVAL_MS } from './quotes';
 import { VERSION } from './version';
 
+type AnalyticsTab = 'overview' | 'day' | 'week' | 'month' | 'year';
+
 const DEMO_USER_ID = 'demo-user-id';
 const demoUser: User = {
   id: DEMO_USER_ID,
@@ -76,6 +78,7 @@ const App: React.FC = () => {
   const [currentTask, setCurrentTask] = useState<string>('');
   const [motivation, setMotivation] = useState<string>('');
   const [stats, setStats] = useState<any[]>([]);
+  const [analyticsTab, setAnalyticsTab] = useState<AnalyticsTab>('overview');
   
   const [plannedTasks, setPlannedTasks] = useState<PlannedTask[]>([]);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -840,7 +843,7 @@ const App: React.FC = () => {
         <header className={`sticky top-0 z-50 w-full border-b backdrop-blur-sm transition-colors duration-300 ${isDark ? 'border-white/10 bg-[#0a0a0a]/95' : 'border-slate-200 bg-white/95'}`}>
           <div className="mx-auto flex w-full max-w-[1600px] items-center justify-between px-6 py-4 lg:px-12">
             <div className="flex items-center gap-3">
-              <div className={`flex h-9 w-9 items-center justify-center rounded-lg font-black text-sm ${isDark ? 'bg-white text-black' : 'bg-slate-900 text-white'}`}>F</div>
+              <img src="/mascotbird/saksaganlogo.png" alt="FoClock AI" className="h-11 w-11 object-contain" />
               <span className={`font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{texts.title}</span>
             </div>
             <div className="flex items-center gap-2 sm:gap-3">
@@ -868,11 +871,12 @@ const App: React.FC = () => {
         <section className="w-full px-6 py-16 lg:px-12 lg:py-24">
           <div className="mx-auto max-w-[1600px]">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-12">
-              <div className="flex-1">
+              <div className="flex-1 relative">
+                <img src="/mascotbird/saksagan.PNG" alt="" className="absolute h-56 w-56 lg:h-72 lg:w-72 object-contain pointer-events-none select-none" style={{ top: '-120px', left: '50%', transform: 'translateX(-50%)' }} aria-hidden />
                 <span className="inline-block rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-6">
                   {texts.beta}
                 </span>
-                <h1 className={`text-4xl font-black tracking-tight sm:text-5xl lg:text-6xl xl:text-7xl ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                <h1 className={`relative text-4xl font-black tracking-tight sm:text-5xl lg:text-6xl xl:text-7xl ${isDark ? 'text-white' : 'text-slate-900'}`}>
                   {texts.subtitle}
                 </h1>
                 <p className={`mt-4 max-w-xl text-lg lg:text-xl ${isDark ? 'text-white/60' : 'text-slate-600'}`}>
@@ -1070,6 +1074,109 @@ const App: React.FC = () => {
 
   const dashOffset = 880 - (880 * timeLeft) / sessionDuration;
   const totalFocusTime = stats.reduce((acc, curr) => acc + curr.duration_minutes, 0);
+  const today = new Date();
+  const locale = lang === 'tr' ? 'tr-TR' : 'en-US';
+
+  const dayAggregates = stats.reduce(
+    (acc: Record<string, { totalMinutes: number; sessionCount: number }>, s: any) => {
+      if (!s || !s.completed_at) return acc;
+      const key = new Date(s.completed_at).toISOString().slice(0, 10);
+      const prev = acc[key] ?? { totalMinutes: 0, sessionCount: 0 };
+      acc[key] = {
+        totalMinutes: prev.totalMinutes + (s.duration_minutes || 0),
+        sessionCount: prev.sessionCount + 1,
+      };
+      return acc;
+    },
+    {},
+  );
+
+  const todayKey = today.toISOString().slice(0, 10);
+  const todayAgg = dayAggregates[todayKey] ?? { totalMinutes: 0, sessionCount: 0 };
+  const todayFocusMinutes = todayAgg.totalMinutes;
+  const todaySessions = todayAgg.sessionCount;
+
+  const focusDays = Object.values(dayAggregates).filter((d) => d.totalMinutes > 0).length;
+  const totalSessions = stats.length;
+
+  const year = today.getFullYear();
+  const monthIndex = today.getMonth();
+  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+  const monthKeyPrefix = `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
+
+  const monthCalendar = Array.from({ length: daysInMonth }, (_, idx) => {
+    const day = idx + 1;
+    const key = `${monthKeyPrefix}-${String(day).padStart(2, '0')}`;
+    const agg = dayAggregates[key];
+    return {
+      day,
+      key,
+      totalMinutes: agg?.totalMinutes ?? 0,
+      sessionCount: agg?.sessionCount ?? 0,
+    };
+  });
+
+  const monthFocusDays = monthCalendar.filter((d) => d.totalMinutes > 0).length;
+  const monthTotalFocusMinutes = monthCalendar.reduce((sum, d) => sum + d.totalMinutes, 0);
+  const monthAvgFocusPerDay = monthFocusDays
+    ? Math.round(monthTotalFocusMinutes / monthFocusDays)
+    : 0;
+
+  const MIN_STREAK_MINUTES = 5;
+  const eligibleDayEntries = Object.entries(dayAggregates).filter(
+    ([, value]) => value.totalMinutes >= MIN_STREAK_MINUTES,
+  );
+  const eligibleKeys = eligibleDayEntries.map(([key]) => key).sort();
+  let bestStreak = 0;
+  let tempStreak = 0;
+  let prevDate: Date | null = null;
+
+  eligibleKeys.forEach((key) => {
+    const date = new Date(`${key}T00:00:00`);
+    if (prevDate) {
+      const diffDays = Math.round(
+        (date.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24),
+      );
+      tempStreak = diffDays === 1 ? tempStreak + 1 : 1;
+    } else {
+      tempStreak = 1;
+    }
+    prevDate = date;
+    if (tempStreak > bestStreak) bestStreak = tempStreak;
+  });
+
+  const streakEligibleSet = new Set(eligibleKeys);
+  let currentStreak = 0;
+  let cursor = new Date(`${todayKey}T00:00:00`);
+
+  while (true) {
+    const key = cursor.toISOString().slice(0, 10);
+    const isToday = key === todayKey;
+    const isEligible = streakEligibleSet.has(key);
+    const hasEnoughToday = todayFocusMinutes >= MIN_STREAK_MINUTES;
+
+    if (!isEligible || (isToday && !hasEnoughToday)) break;
+    currentStreak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+
+  const minutesNeededForStreak = Math.max(0, MIN_STREAK_MINUTES - todayFocusMinutes);
+  const streakHint =
+    eligibleKeys.length === 0
+      ? lang === 'tr'
+        ? 'Henüz kayıtlı bir odak günün yok. İlk oturumunu tamamla.'
+        : 'No focus days yet. Complete your first session.'
+      : minutesNeededForStreak > 0
+        ? lang === 'tr'
+          ? `Serini korumak için bugün en az ${MIN_STREAK_MINUTES} dk odaklan. Kalan: ${minutesNeededForStreak} dk.`
+          : `Focus at least ${MIN_STREAK_MINUTES} min today to keep your streak. Remaining: ${minutesNeededForStreak} min.`
+        : currentStreak > 0
+          ? lang === 'tr'
+            ? 'Bugünkü odak süren serini korudu. Aynı tempoda devam!'
+            : 'Your focus today kept your streak alive. Keep it up!'
+          : lang === 'tr'
+            ? 'Bugünle birlikte yeni bir seri başlatabilirsin.'
+            : 'You can start a new streak today.';
 
   return (
     <div className="app-shell" data-theme={theme}>
@@ -1085,7 +1192,10 @@ const App: React.FC = () => {
               <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
             </svg>
           </button>
-          <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-bright)] flex-1 text-center">{t.architectTitle}</span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-bright)] flex-1 text-center flex items-center justify-center gap-2">
+            <img src="/mascotbird/saksagan.PNG" alt="" className="h-7 w-7 object-contain" aria-hidden />
+            {t.architectTitle}
+          </span>
           <div className="w-[72px] shrink-0 flex justify-end">
             {!chatHistoryPanelOpen && (
               <button
@@ -1174,6 +1284,10 @@ const App: React.FC = () => {
             <div ref={chatEndRef} />
           </div>
           <div className="relative mt-4">
+            <div className="flex items-center gap-2 mb-2">
+              <img src="/mascotbird/saksagan.PNG" alt="" className="h-10 w-10 object-contain opacity-90" aria-hidden />
+              <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--text-dim)]">{lang === 'tr' ? 'FUFİT hedefini bekliyor...' : 'FUFİT is waiting for your goal...'}</span>
+            </div>
             <input value={userInput} onChange={e => setUserInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleChat()} disabled={isProcessing} className="w-full bg-white/5 border border-[var(--border)] rounded-2xl p-5 text-xs outline-none focus:border-[var(--text-bright)] transition-all shadow-inner" placeholder={isProcessing ? t.analyzing : t.architectHint} />
             {isProcessing && <div className="absolute right-5 top-5 w-4 h-4 border-2 border-[var(--text-bright)] border-t-transparent rounded-full animate-spin"></div>}
           </div>
@@ -1270,7 +1384,7 @@ const App: React.FC = () => {
       </main>
 
       <aside className="right-zone-v2">
-<div className="sidebar-header flex justify-between items-center bg-white/5 backdrop-blur-md">
+        <div className="sidebar-header flex justify-between items-center bg-white/5 backdrop-blur-md">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-gray-200 to-white flex items-center justify-center text-[10px] font-black text-black shadow-sm shrink-0">{(user?.username || user?.name)?.[0]}</div>
             <div className="min-w-0">
@@ -1280,28 +1394,283 @@ const App: React.FC = () => {
           </div>
           <button onClick={() => authService.logout().then(() => { setUser(null); setView('auth'); })} className="p-2 rounded-lg hover:bg-red-500/10 text-red-500 transition-all shrink-0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg></button>
         </div>
-         <div className="sidebar-content px-6 py-8 flex-1 flex flex-col min-h-0">
-            {sidebarModule === 'analytics' ? (
-               <div className="animate-fade">
-                  <div className="flex items-center justify-between mb-8">
-                    <h4 className="text-[11px] font-black text-[var(--text-dim)] uppercase tracking-widest">NÖRAL VERİLER</h4>
-                    <span className="text-[18px] font-black text-[var(--text-bright)]">{totalFocusTime}<span className="text-[10px] text-[var(--text-dim)] ml-1">m</span></span>
+        <div className="sidebar-content px-6 py-8 flex-1 flex flex-col min-h-0">
+          {sidebarModule === 'analytics' ? (
+            <div className="animate-fade flex flex-col gap-6">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-[var(--text-dim)]">
+                    {lang === 'tr' ? 'Bugünün Odağı' : "Today's Focus"}
+                  </p>
+                  <p className="mt-1 text-[11px] font-black text-[var(--text-bright)]">
+                    {today.toLocaleDateString(locale, {
+                      weekday: 'long',
+                      day: 'numeric',
+                      month: 'long',
+                    })}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 rounded-full border border-[var(--border)] bg-white/5 px-1 py-0.5 text-[8px] font-bold uppercase tracking-[0.25em]">
+                  {(['overview', 'day', 'week', 'month', 'year'] as AnalyticsTab[]).map((tab) => (
+                    <button
+                      key={tab}
+                      type="button"
+                      onClick={() => setAnalyticsTab(tab)}
+                      className={`px-2 py-1 rounded-full transition-all ${
+                        analyticsTab === tab
+                          ? 'bg-[var(--accent)] text-[var(--accent-text)] shadow-sm'
+                          : 'text-[var(--text-dim)] hover:text-[var(--text-bright)]'
+                      }`}
+                    >
+                      {lang === 'tr'
+                        ? tab === 'overview'
+                          ? 'GENEL'
+                          : tab === 'day'
+                            ? 'GÜN'
+                            : tab === 'week'
+                              ? 'HAFTA'
+                              : tab === 'month'
+                                ? 'AY'
+                                : 'YIL'
+                        : tab === 'overview'
+                          ? 'OVR'
+                          : tab === 'day'
+                            ? 'DAY'
+                            : tab === 'week'
+                              ? 'WEEK'
+                              : tab === 'month'
+                                ? 'MONTH'
+                                : 'YEAR'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2 rounded-2xl border border-[var(--border)] bg-white/5 p-4 shadow-sm">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[var(--text-dim)]">
+                      {lang === 'tr' ? 'Bugünün Özeti' : "Today's Summary"}
+                    </p>
+                    <span className="text-[18px] font-black text-[var(--text-bright)] tabular-nums">
+                      {todayFocusMinutes}m
+                    </span>
                   </div>
-                  <div className="space-y-3">
-                    {stats.slice(0, 10).map((s, i) => (
-                      <div key={i} className="p-4 border border-[var(--border)] rounded-2xl flex justify-between items-center text-[10px] font-bold uppercase bg-white/5 shadow-sm">
-                        <div className="flex flex-col">
-                          <span className="truncate w-32 text-[var(--text-bright)]">{s.task_title}</span>
-                          <span className="text-[8px] text-[var(--text-dim)] mt-1">{new Date(s.completed_at).toLocaleDateString()}</span>
-                        </div>
-                        <span className="bg-[var(--accent)] text-[var(--accent-text)] px-3 py-1 rounded-full text-[9px]">{s.duration_minutes}m</span>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-xl bg-white/5 border border-[var(--border)] px-3 py-2">
+                      <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[var(--text-dim)]">
+                        {lang === 'tr' ? 'Oturumlar' : 'Sessions'}
+                      </p>
+                      <p className="mt-1 text-[16px] font-black text-[var(--text-bright)] tabular-nums">
+                        {todaySessions}
+                      </p>
+                    </div>
+                    <div className="rounded-xl bg-white/5 border border-[var(--border)] px-3 py-2">
+                      <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[var(--text-dim)]">
+                        {lang === 'tr' ? 'Günlük Hedef' : 'Daily Goal'}
+                      </p>
+                      <p className="mt-1 text-[12px] font-semibold text-[var(--text-bright)]">
+                        {MIN_STREAK_MINUTES}m {lang === 'tr' ? 've üzeri' : 'or more'}
+                      </p>
+                      <p className="mt-0.5 text-[9px] text-[var(--text-dim)]">
+                        {minutesNeededForStreak > 0
+                          ? lang === 'tr'
+                            ? `${minutesNeededForStreak} dk kaldı`
+                            : `${minutesNeededForStreak} min left`
+                          : lang === 'tr'
+                            ? 'Hedef tamamlandı'
+                            : 'Goal reached'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-[var(--border)] bg-white/5 p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[var(--text-dim)] mb-2">
+                    {lang === 'tr' ? 'Seriler' : 'Streaks'}
+                  </p>
+                  <div className="flex items-baseline gap-3">
+                    <div>
+                      <p className="text-[22px] font-black text-[var(--text-bright)] tabular-nums">
+                        {currentStreak}
+                      </p>
+                      <p className="text-[9px] text-[var(--text-dim)]">
+                        {lang === 'tr' ? 'Günlük seri' : 'Day streak'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-semibold text-[var(--text-bright)]">
+                        {bestStreak}
+                        <span className="ml-1 text-[9px] text-[var(--text-dim)]">
+                          {lang === 'tr' ? 'en iyi' : 'best'}
+                        </span>
+                      </p>
+                      <p className="mt-1 text-[9px] text-[var(--text-dim)] leading-relaxed">
+                        {streakHint}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-[var(--border)] bg-white/5 p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[var(--text-dim)] mb-2">
+                    {lang === 'tr' ? 'Toplam Odak' : 'Lifetime Focus'}
+                  </p>
+                  <div className="space-y-1.5">
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-[9px] text-[var(--text-dim)]">
+                        {lang === 'tr' ? 'Toplam süre' : 'Total time'}
+                      </span>
+                      <span className="text-[13px] font-black text-[var(--text-bright)] tabular-nums">
+                        {totalFocusTime}m
+                      </span>
+                    </div>
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-[9px] text-[var(--text-dim)]">
+                        {lang === 'tr' ? 'Toplam oturum' : 'Sessions'}
+                      </span>
+                      <span className="text-[11px] font-semibold text-[var(--text-bright)] tabular-nums">
+                        {totalSessions}
+                      </span>
+                    </div>
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-[9px] text-[var(--text-dim)]">
+                        {lang === 'tr' ? 'Odak günleri' : 'Focus days'}
+                      </span>
+                      <span className="text-[11px] font-semibold text-[var(--text-bright)] tabular-nums">
+                        {focusDays}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-[var(--border)] bg-white/5 p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[var(--text-dim)]">
+                      {lang === 'tr' ? 'Bu Ayın Takvimi' : 'This Month'}
+                    </p>
+                    <p className="mt-1 text-[10px] font-semibold text-[var(--text-bright)]">
+                      {today.toLocaleDateString(locale, { month: 'long', year: 'numeric' })}
+                    </p>
+                  </div>
+                  <div className="text-right text-[9px] text-[var(--text-dim)]">
+                    <div>
+                      {lang === 'tr' ? 'Odaklı gün' : 'Days focused'}:{' '}
+                      <span className="font-semibold text-[var(--text-bright)]">
+                        {monthFocusDays}
+                      </span>
+                    </div>
+                    <div>
+                      {lang === 'tr' ? 'Ort. odak (gün)' : 'Avg focus (day)'}:{' '}
+                      <span className="font-semibold text-[var(--text-bright)]">
+                        {monthAvgFocusPerDay}m
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-7 gap-1.5 mb-3">
+                  {(lang === 'tr'
+                    ? ['P', 'P', 'S', 'Ç', 'P', 'C', 'C']
+                    : ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+                  ).map((d, idx) => (
+                    <div
+                      key={idx}
+                      className="text-[8px] text-[var(--text-dim)] text-center uppercase tracking-[0.18em]"
+                    >
+                      {d}
+                    </div>
+                  ))}
+                  {(() => {
+                    const firstDayOfWeek = new Date(year, monthIndex, 1).getDay(); // 0: Sunday
+                    const offset = (firstDayOfWeek + 6) % 7; // make Monday index 0
+                    const blanks = Array.from({ length: offset });
+                    return (
+                      <>
+                        {blanks.map((_, idx) => (
+                          <div key={`b-${idx}`} />
+                        ))}
+                        {monthCalendar.map((d) => {
+                          const hasFocus = d.totalMinutes > 0;
+                          const isToday =
+                            d.day === today.getDate() &&
+                            monthIndex === today.getMonth() &&
+                            year === today.getFullYear();
+                          return (
+                            <div
+                              key={d.key}
+                              className={`flex h-7 w-7 items-center justify-center rounded-full text-[9px] tabular-nums ${
+                                hasFocus
+                                  ? 'bg-[var(--accent)] text-[var(--accent-text)] shadow-sm'
+                                  : 'bg-white/5 text-[var(--text-dim)]'
+                              } ${
+                                isToday
+                                  ? 'ring-2 ring-[var(--text-bright)] ring-offset-2 ring-offset-[var(--bg-sidebar)]'
+                                  : ''
+                              }`}
+                            >
+                              {d.day}
+                            </div>
+                          );
+                        })}
+                      </>
+                    );
+                  })()}
+                </div>
+                <div className="flex items-center justify-between text-[9px] text-[var(--text-dim)]">
+                  <span>
+                    {lang === 'tr' ? 'Bu ayki toplam odak' : 'Total focus this month'}:{' '}
+                    <span className="font-semibold text-[var(--text-bright)]">
+                      {monthTotalFocusMinutes}m
+                    </span>
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.25em] text-[var(--text-dim)]">
+                  {lang === 'tr' ? 'Son Oturumlar' : 'Recent Sessions'}
+                </p>
+                <div className="space-y-2 max-h-[180px] overflow-y-auto custom-scrollbar pr-1">
+                  {stats.slice(0, 8).map((s, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center justify-between rounded-xl border border-[var(--border)] bg-white/5 px-3 py-2 text-[9px]"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-[var(--text-bright)] font-semibold">
+                          {s.task_title}
+                        </p>
+                        <p className="mt-0.5 text-[var(--text-dim)]">
+                          {new Date(s.completed_at).toLocaleDateString(locale, {
+                            day: '2-digit',
+                            month: 'short',
+                          })}
+                        </p>
                       </div>
-                    ))}
-                    {stats.length === 0 && <div className="py-20 text-center"><p className="text-[10px] italic opacity-40 uppercase tracking-widest">Veri bekleniyor...</p></div>}
-                  </div>
-                  <button className="w-full mt-8 py-4 border border-[var(--border)] rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/5 transition-all" onClick={() => setSidebarModule('default')}>Geri Dön</button>
-               </div>
-            ) : sidebarModule === 'social' ? (
+                      <span className="ml-2 rounded-full bg-[var(--accent)] px-3 py-1 text-[var(--accent-text)] font-bold tabular-nums">
+                        {s.duration_minutes}m
+                      </span>
+                    </div>
+                  ))}
+                  {stats.length === 0 && (
+                    <div className="py-10 text-center">
+                      <p className="text-[9px] italic uppercase tracking-[0.2em] opacity-40">
+                        {lang === 'tr' ? 'Henüz veri yok.' : 'No data yet.'}
+                      </p>
+                    </div>
+                  )}
+                </div>
+                <button
+                  className="mt-2 w-full rounded-2xl border border-[var(--border)] py-3 text-[10px] font-black uppercase tracking-[0.25em] hover:bg-white/5 transition-all"
+                  onClick={() => setSidebarModule('default')}
+                >
+                  {lang === 'tr' ? 'Ana ekrana dön' : 'Back to main'}
+                </button>
+              </div>
+            </div>
+          ) : sidebarModule === 'social' ? (
               <div className="animate-fade">
                 <div className="flex items-center justify-between mb-8">
                   <h4 className="text-[11px] font-black text-[var(--text-dim)] uppercase tracking-widest">{t.social}</h4>
