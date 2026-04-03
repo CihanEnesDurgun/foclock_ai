@@ -4,7 +4,7 @@
 
 # 🧠 FoClock AI - Nöral Odak Motoru
 
-**Beta v1.5** · Bilimsel temellere dayalı, AI destekli odak yönetimi sistemi
+**Neural Beta 1.5.C** (`package.json` **1.5.1**) · Bilimsel temellere dayalı, AI destekli odak yönetimi sistemi
 
 FoClock AI, üretkenliğinizi artırmak için tasarlanmış, yapay zeka destekli bir Pomodoro timer ve görev planlama uygulamasıdır. Ultradian ritimler ve Flow State protokolü gibi bilimsel yaklaşımları kullanarak, beyninizin doğal çalışma döngülerine uyum sağlar ve maksimum verimlilik için optimize edilmiş çalışma oturumları oluşturur.
 
@@ -189,7 +189,7 @@ Deployment tamamlandıktan sonra:
 
 1. **"new row violates row-level security policy for table profiles"**  
    Kayıt sırasında bu hata alıyorsanız, Supabase’de `profiles` için RLS politikaları eksik demektir.  
-   `scripts/fix-profiles-rls.sql` dosyasını **Supabase Dashboard → SQL Editor**’da çalıştırın.
+   `supabase/migrations/001_initial_schema.sql` dosyasındaki RLS / `profiles` politikalarını **Supabase Dashboard → SQL Editor**’da güncelleyin veya ilgili migration’ı yeniden uygulayın.
 
 2. **"Email not confirmed"**  
    Girişte bu hata çıkıyorsa, Supabase Auth e-posta doğrulaması açıktır.  

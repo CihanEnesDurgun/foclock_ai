@@ -1,5 +1,34 @@
 # Changelog
 
+## [1.5.C] – Project layout & Supabase migrations (2026-04-03)
+
+### Architecture
+
+- **Source root:** Application TypeScript/CSS moved under `src/` (`App.tsx`, `index.tsx`, `index.css`, `version.ts`, `services/`, `types/`, `locales/`, `quotes/`).
+- **Vite alias:** `@` now resolves to `src/` (`vite.config.ts`, `tsconfig.json` paths).
+- **Entry:** `index.html` loads `/src/index.tsx`; global styles imported from `src/index.tsx`.
+
+### Documentation
+
+- **Root cleanup:** Guides (`CHANGELOG.md`, `DEPLOY_NOTES.md`, `LOCAL_TEST.md`, `PROJECT_OVERVIEW_FOR_AI.md`, `README-SQL.md`) moved to `docs/`; only `README.md` remains in repository root.
+
+### Database
+
+- **Migrations:** SQL from `scripts/` relocated to `supabase/migrations/` with ordered names: `001_initial_schema.sql` … `007_cleanup_data.sql` (RLS fix is `006_fix_rls.sql`, after cowork/rooms schema).
+
+### Deployment (Vercel / production)
+
+- **No new environment variables** required for this release; existing `GEMINI_API_KEY` / `VITE_*` setup is unchanged.
+- **Build:** `npm run build` (Vite) succeeds; entry is `index.html` → `/src/index.tsx`.
+- **Database:** Point-only documentation / file path change for operators setting up Supabase from scratch (`docs/README-SQL.md`). Running production app does not require re-running SQL if your project database is already provisioned.
+
+### Version metadata
+
+- `package.json` → **1.5.1** (semver patch for this layout release).
+- `src/version.ts` → display **1.5.C**.
+
+---
+
 ## [1.5.B] – Welcome Screen Overhaul & UX Improvements (2026-01-31)
 
 ### Welcome Screen Redesign
