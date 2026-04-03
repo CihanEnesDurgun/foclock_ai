@@ -22,8 +22,8 @@ npm install
 
 Supabase Dashboard → SQL Editor'da sırayla çalıştır:
 
-1. **`scripts/schema.sql`** – Temel şema (profiles, friend_requests, active_sessions, RPC'ler)
-2. **`scripts/schema-cowork-rooms.sql`** – Birlikte Çalış + Odalar şeması:
+1. **`supabase/migrations/001_initial_schema.sql`** – Temel şema (profiles, friend_requests, active_sessions, RPC'ler)
+2. **`supabase/migrations/002_schema_cowork_rooms.sql`** – Birlikte Çalış + Odalar şeması:
    - `sessions` tablosu (tamamlanan oturumlar)
    - `active_sessions` tablosuna `paired_with_user_id` kolonu
    - `co_work_pairs` tablosu (Birlikte Çalış)

@@ -79,7 +79,7 @@ npm run build
 **No database changes required for this release.**
 
 If setting up from scratch:
-1. Run `scripts/schema.sql` in Supabase SQL Editor
+1. Run `supabase/migrations/001_initial_schema.sql` (ve gerekiyorsa `docs/README-SQL.md` sırasındaki diğer migration’lar) in Supabase SQL Editor
 2. Ensure RLS policies are enabled
 3. Verify all RPC functions are created
 
