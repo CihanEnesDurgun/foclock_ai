@@ -1,5 +1,33 @@
 # Changelog
 
+## [1.5.D] – Adaptive AI Core: Fufit AI v2 (2026-04-12)
+
+### AI / Prompt Engineering
+
+- **Tam adaptif sistem prompt:** Fufit AI artık her görevi ve her kullanıcıyı ayrı ayrı okuyor. Sabit 90 dakikalık şablon kaldırıldı.
+- **5 katmanlı Odak Profili sistemi:** Novice (15–25 dk) → Developing (30–35 dk) → Intermediate (45–52 dk) → Advanced (90 dk) → Hyperfocus (90–120 dk). Blok süreleri bu profile göre otomatik seçiliyor.
+- **5 Görev Kapsamı sınıflandırması:** Micro / Light / Medium / Deep / Marathon. Küçük görevler artık tek blok 10–20 dk olarak planlanıyor; büyük projeler birden fazla güne yayılıyor.
+- **Görev türü modifikatörleri:** Yaratıcı iş (ısınma bloğu), Analitik (standart profil), Tekrarlı/Rote iş (max 25–30 dk), Öğrenme/Çalışma (Spacing Effect: 3×30 > 1×90), Deadline baskısı (Parkinson Yasası: agresif timebox).
+- **8 psikoloji ilkesi entegrasyonu:** Cognitive Load Theory, Ultradian Rhythms, Flow Entry Latency, Zeigarnik Effect, Yerkes-Dodson Yasası, Ego Depletion, Spacing Effect, Parkinson Yasası.
+- **Adaptif tanı mekanizması:** Kullanıcı belleği boşsa plan önermeden önce tek hedefli bir soru soruyor; bellek doluysa soru sormadan doğrudan profile uygun plan üretiyor.
+- **Draugiem Group araştırması entegrasyonu:** Intermediate profil için 52 dk / 17 dk mola oranı eklendi.
+
+### Memory System
+
+- `extractNewInsights` geliştirildi: Artık yalnızca tercih edilen blok sürelerini değil; odak profili sınıfını, molaya direnç sinyallerini, görev türü alışkanlıklarını, baskı altında performansı ve Parkinson Yasası tepkisini de kaydediyor.
+- `assembleInstruction` güncellendi: Bellek verisi varsa profil çıkarımı için aktif kullanılıyor; yoksa tanı modu devreye giriyor.
+
+### Documentation
+
+- `docs/ELEVATOR_PITCH.md` eklendi: Türkçe 30 sn / 60 sn pitch metni, hedef kitle tablosu, rakip farkı analizi.
+- `docs/PROMPT_TEST_SCENARIOS.md` eklendi: 10 senaryoluk kapsamlı test paketi; beklenen davranışlar, başarı kriterleri ve kırmızı bayraklar ile birlikte. Puanlama tablosu dahil.
+
+### Version Metadata
+
+- `src/version.ts` → **1.5.D**
+
+---
+
 ## [1.5.C] – Project layout & Supabase migrations (2026-04-03)
 
 ### Architecture
