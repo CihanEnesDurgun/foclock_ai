@@ -1,4 +1,5 @@
 
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import React, { useState, useEffect, useRef } from 'react';
 import { TimerStatus, PomodoroSession, PlannedTask, TimerMode, ChatMessage, User, FriendActivity, FriendRequest, Room } from './types';
 import { suggestPlan, finalizeTasks, getMotivation, summarizeSession, formatMessage, generateChatTitle, extractNewInsights } from './services/geminiService';
@@ -2427,6 +2428,7 @@ const App: React.FC = () => {
           </div>
         </div>
       )}
+      <SpeedInsights />
     </div>
   );
 };
