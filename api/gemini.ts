@@ -27,7 +27,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Gemini API'ye server-side istek
     const endpoint = `${GEMINI_API_BASE}/models/${model}:generateContent?key=${apiKey}`;
 
-    const geminiBody: Record<string, unknown> = { contents };
+    // Gemini REST API contents formatı: string → parts array'e dönüştür
+    const contentsFormatted = typeof contents === 'string'
+      ? [{ role: 'user', parts: [{ text: contents }] }]
+      : contents;
+
+    const geminiBody: Record<string, unknown> = { contents: contentsFormatted };
 
     // systemInstruction → system_instruction olarak gönder
     if (config?.systemInstruction) {
