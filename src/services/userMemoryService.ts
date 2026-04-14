@@ -2,6 +2,14 @@ import { supabase } from './supabase';
 
 const MAX_INSIGHTS_FOR_PROMPT = 20;
 
+// ---------------------------------------------------------------------------
+// KVKK / GDPR Notu:
+// Bu servisten çekilen insight verileri Google Gemini API'ye prompt
+// bağlamında gönderilir. Kullanıcının bu veri paylaşımı hakkında bilgilendirilmesi
+// ve rıza göstermesi gerekir. Kayıt ve ayarlar ekranlarında bilgilendirme metni
+// sunulmalıdır. Kullanıcı hafızasını silmek için clearAllInsights() kullanılabilir.
+// ---------------------------------------------------------------------------
+
 /**
  * Kullanıcının AI belleğinden son N insight'ı getirir.
  * Planlama prompt'unda USER CONTEXT olarak kullanılır.
@@ -64,4 +72,16 @@ export function buildUserContext(
   }
 
   return parts.join('\n');
+}
+
+/**
+ * Kullanıcının tüm AI hafıza kayıtlarını siler.
+ * KVKK/GDPR "unutulma hakkı" kapsamında ayarlar ekranından çağrılabilir.
+ */
+export async function clearAllInsights(userId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('user_ai_memory')
+    .delete()
+    .eq('user_id', userId);
+  return !error;
 }

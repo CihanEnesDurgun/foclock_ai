@@ -4,6 +4,38 @@ import { checkUsernameAvailable, validateUsername, getFriendIds } from './friend
 
 const DEFAULT_PREFS = { theme: 'dark' as const, language: 'tr' as const, notifications: true };
 
+// ---------------------------------------------------------------------------
+// [H-3] Şifre politikası — OWASP ASVS Level 1 uyumlu
+// ---------------------------------------------------------------------------
+const PASSWORD_MIN_LENGTH = 12;
+
+function validatePassword(password: string): { ok: boolean; error?: string } {
+  if (password.length < PASSWORD_MIN_LENGTH)
+    return { ok: false, error: `Şifre en az ${PASSWORD_MIN_LENGTH} karakter olmalıdır.` };
+  if (!/[A-Z]/.test(password))
+    return { ok: false, error: 'Şifrede en az bir büyük harf bulunmalıdır.' };
+  if (!/[a-z]/.test(password))
+    return { ok: false, error: 'Şifrede en az bir küçük harf bulunmalıdır.' };
+  if (!/[0-9]/.test(password))
+    return { ok: false, error: 'Şifrede en az bir rakam bulunmalıdır.' };
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// [L-1] Production-safe log — hassas Supabase hata detaylarını gizler
+// ---------------------------------------------------------------------------
+const isDev = import.meta.env.DEV;
+
+function safeLog(label: string, error: unknown) {
+  if (isDev) {
+    // Geliştirme ortamında tam hata objesi loglanır
+    console.error(label, error);
+  } else {
+    // Production'da yalnızca etiket basılır, detay gizlenir
+    console.error(label, '(detay gizlendi — geliştirme modunda çalıştırın)');
+  }
+}
+
 export const authService = {
   register: async (userData: Partial<User>): Promise<{ success: boolean; error?: string }> => {
     const username = typeof userData.username === 'string' ? userData.username.trim() : '';
@@ -12,6 +44,10 @@ export const authService = {
 
     const available = await checkUsernameAvailable(username);
     if (!available) return { success: false, error: 'username_taken' };
+
+    // [H-3] Şifre doğrulama
+    const pwdCheck = validatePassword(userData.password ?? '');
+    if (!pwdCheck.ok) return { success: false, error: pwdCheck.error };
 
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: userData.email!,
@@ -32,11 +68,8 @@ export const authService = {
       session = (await supabase.auth.getSession()).data.session;
     }
 
-    // Email confirmation açıksa session olmayabilir; yine de profil oluşturmayı dene
-    // RLS için SECURITY DEFINER fonksiyonu kullanacağız veya service role key gerekebilir
-    // Şimdilik: session varsa normal insert, yoksa RPC ile insert dene
     let profileInserted = false;
-    
+
     if (session) {
       const { error: profileError } = await supabase.from('profiles').insert({
         id: authData.user.id,
@@ -50,14 +83,12 @@ export const authService = {
       });
 
       if (profileError) {
-        console.error('[authService] Profile insert failed (with session):', profileError);
-        // RLS hatası olabilir; RPC ile dene
+        safeLog('[authService] Profil insert hatası (session mevcut):', profileError);
       } else {
         profileInserted = true;
       }
     }
 
-    // Session yoksa veya insert başarısızsa RPC ile dene
     if (!profileInserted) {
       const { error: rpcError } = await supabase.rpc('create_user_profile', {
         p_user_id: authData.user.id,
@@ -71,18 +102,16 @@ export const authService = {
       });
 
       if (rpcError) {
-        console.error('[authService] Profile RPC insert failed:', rpcError);
-        // RPC yoksa manuel insert dene (anon key ile, RLS bypass için)
-        // Son çare: kullanıcıya email confirmation sonrası profil oluşturulacağını söyle
+        safeLog('[authService] Profil RPC insert hatası:', rpcError);
         if (!session) {
-          return { 
-            success: false, 
-            error: 'Kayıt başarılı ancak profil oluşturulamadı. E-posta doğrulamasından sonra tekrar giriş yapın veya destek ile iletişime geçin.' 
+          return {
+            success: false,
+            error: 'Kayıt başarılı ancak profil oluşturulamadı. E-posta doğrulamasından sonra tekrar giriş yapın.'
           };
         }
         if (/duplicate|unique|already exists/i.test(rpcError.message))
           return { success: false, error: 'Bu e-posta veya kullanıcı adı zaten kullanılıyor.' };
-        return { success: false, error: `Profil kaydedilemedi: ${rpcError.message}` };
+        return { success: false, error: 'Profil kaydedilemedi. Lütfen tekrar deneyin.' };
       }
     }
 
@@ -93,13 +122,16 @@ export const authService = {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
-      if (/email not confirmed|email_not_confirmed/i.test(error.message))
-        return { success: false, error: 'E-posta doğrulanmamış. Lütfen gelen kutunuzu kontrol edin.' };
-      if (/invalid login|invalid_credentials/i.test(error.message) || error.status === 400)
-        return { success: false, error: 'Geçersiz e-posta veya şifre.' };
+      // [M-1] Tüm kimlik doğrulama hataları için tek tip mesaj — email enumeration önlemi
       if (/rate limit|email rate limit/i.test(error.message))
         return { success: false, error: 'Çok fazla deneme. Lütfen birkaç dakika sonra tekrar deneyin.' };
-      return { success: false, error: error.message || 'Giriş yapılamadı.' };
+
+      // Email confirmed değilse ayrı bilgi ver (kullanıcının aksiyon alması gerekiyor)
+      if (/email not confirmed|email_not_confirmed/i.test(error.message))
+        return { success: false, error: 'E-posta doğrulanmamış. Lütfen gelen kutunuzu kontrol edin.' };
+
+      // Diğer tüm hatalar (geçersiz email, yanlış şifre, bulunamayan hesap) tek mesaj
+      return { success: false, error: 'Geçersiz e-posta veya şifre.' };
     }
 
     if (!data.user) return { success: false, error: 'Kullanıcı bilgisi alınamadı.' };
@@ -122,7 +154,7 @@ export const authService = {
         preferences: meta.preferences ?? DEFAULT_PREFS,
         project_tags: meta.project_tags ?? [],
       }, { onConflict: 'id' });
-      if (upsertErr) console.error('[authService] Profile upsert on login failed:', upsertErr);
+      if (upsertErr) safeLog('[authService] Profil upsert hatası:', upsertErr);
       const { data: refreshed } = await supabase.from('profiles').select('*').eq('id', data.user.id).single();
       profile = refreshed ?? undefined;
     }
@@ -171,7 +203,6 @@ export const authService = {
 
   saveCompletedSession: async (userId: string, title: string, duration: number) => {
     await supabase.from('sessions').insert({ user_id: userId, task_title: title, duration_minutes: duration });
-    // Remove from active_sessions when completed
     await supabase.from('active_sessions').delete().eq('user_id', userId);
   },
 
