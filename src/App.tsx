@@ -795,19 +795,56 @@ const App: React.FC = () => {
         subtitle: 'Nöral Odak Motoru',
         tagline: 'Bilimsel temellere dayalı odak yönetimi',
         beta: VERSION.betaLabel,
-        hero: 'Görevlerinizi yazın. AI planlasın. Odaklanın.',
-        f1: 'AI Planlama',
-        f1d: 'Fufit AI görevlerinizi bilimsel temellere göre planlar.',
-        f2: 'Ultradian & Flow',
-        f2d: '90 dk odak, 20 dk reset. Doğal ritminize uyum.',
-        f3: 'Sosyal Odak',
-        f3d: 'Arkadaşlarınızla birlikte çalışın, odalarda odaklanın.',
-        f4: 'İstatistikler',
-        f4d: 'Oturumlarınızı ve odak sürenizi takip edin.',
-        howTitle: 'Nasıl çalışır?',
-        step1: 'Sol panelde görevinizi yazın',
-        step2: 'AI plan oluşturur, kuyruğa eklenir',
-        step3: 'Timer\'ı başlatın, odaklanın',
+        heroKicker: 'YAPAY ZEKA DESTEKLİ SOSYAL ODAKLANMA PLATFORMU',
+        heroHead1: 'Daha dağınık değil,',
+        heroHead2: 'daha derin çalış.',
+        heroSub: 'Ne çalışmak istediğini yapay zekaya anlat. Fufit AI görev kapsamını hesaplar ve sana en uygun çalışma planını çıkarır.',
+        ctaPrimary: 'Ücretsiz hesap aç',
+        ctaSecondary: 'Demo modunda dene',
+        trustLine: '8 Bilimsel İlke · Ultradian Ritim · Flow State · Pomodoro+',
+        howTitle: 'Üç adımda odağa gir',
+        howKicker: 'NASIL ÇALIŞIR',
+        step1Title: 'Ne yapmak istediğini anlat',
+        step1Desc: 'Fufit AI\'a bugün ne üzerinde çalışmak istediğini yaz. "React bileşeni tasarla", "makale yaz", "ders çalış" — istediğin kadar detay ver.',
+        step2Title: 'AI senin için plan kurar',
+        step2Desc: 'Yapay zeka görevi analiz eder, odak profilini belirler ve 90 dakikalık bloklara böler. Hangi işin önce geleceğine, molalar ne zaman olacağına o karar verir.',
+        step3Title: 'Çalış, ilerlemeni izle',
+        step3Desc: 'Timer başlar, sen sadece odaklanırsın. Oturum bitince analiz panelinde o gün ne kadar üretken olduğunu, hangi saatlerin daha verimli geçtiğini görürsün.',
+        sciKicker: 'BİLİMSEL TEMELLER',
+        sciTitle: 'Sezgiyle değil, 8 psikolojik ilkeyle plan',
+        sciIntro: 'Her plan bu sekiz ilkeyi birlikte değerlendirir. Böylece odak süresi, mola aralığı ve görev sırası senin bilişsel durumuna uyumlanır.',
+        p1: 'Bilişsel Yük Teorisi',
+        p1d: 'Görevler çalışan hafızayı aşmayacak bloklara bölünür.',
+        p2: 'Ultradian Ritim',
+        p2d: '~90 dk odak, 20 dk reset — beynin doğal döngüsüyle hizalan.',
+        p3: 'Zeigarnik Etkisi',
+        p3d: 'Yarım kalan görev zihni meşgul eder; planla kapat.',
+        p4: 'Yerkes–Dodson Yasası',
+        p4d: 'Performans orta uyarılmada zirveye ulaşır; zorluk ayarlanır.',
+        p5: 'Ego Tükenmesi',
+        p5d: 'İrade oturum boyunca azalır; zor işler başa alınır.',
+        p6: 'Aralıklı Tekrar',
+        p6d: 'Dağıtılmış pratik, ezbercilikten kalıcıdır.',
+        p7: 'Flow Giriş Gecikmesi',
+        p7d: 'Flow 15–20 dk sürer; ilk blok kesintiye kapatılır.',
+        p8: 'Parkinson Yasası',
+        p8d: 'İş süreyi doldurur; timebox gerçek bitişi getirir.',
+        featKicker: 'ÖZELLİKLER',
+        featTitle: 'Odaklanmak için ihtiyacın olan her şey',
+        f1: 'AI ile Kişisel Planlama',
+        f1d: 'Ne çalışmak istediğini yaz, gerisini Fufit AI halletsin. Görev kapsamını, zorluk seviyeni ve odak profilini analiz ederek sana özel bir plan çıkarır. Tahmin yok, sezgi yok.',
+        f2: 'Odak Profilleri',
+        f2d: 'Novice\'ten Hyperfocus\'a 5 farklı profil. Bilişsel durumuna göre blok süresi ve mola ritmi otomatik ayarlanır; ne yorulursun ne de sıkılırsın.',
+        f3: 'Çalışma Odaları',
+        f3d: 'Arkadaşlarınla ya da yabancılarla sessiz odak odaları kur. Herkes kendi işini yapar, birlikte çalışmanın motivasyonunu hisseder. Davet kodu ile saniyeler içinde katıl.',
+        f4: 'Pair Mode',
+        f4d: 'Tek bir arkadaşınla eşleş. Karşılıklı odak ritminizi senkronize edin, birbirinizin anlık durumunu takip edin. İki kişilik, sessiz ama güçlü bir çalışma deneyimi.',
+        f5: 'Analiz Paneli',
+        f5d: 'Günlük, haftalık ve aylık odak istatistiklerin. Oturum başına verimlilik skoru, dağılım grafiği ve çalışma örüntülerin tek ekranda. Hangi saatlerde daha iyi çalıştığını keşfet.',
+        f6: 'AI Konuşma Hafızası',
+        f6d: 'Fufit AI önceki oturumlarından öğrenir. Her yeni planlama biraz daha kişisel, biraz daha isabetli hale gelir. Konuşma geçmişin korunur, bağlam hiç kesilmez.',
+        finalTitle: 'Hazır mısın?',
+        finalSub: 'İlk oturumun 60 saniyede kurulur. Kart gerekmez.',
         login: 'Giriş Yap',
         register: 'Hesap Oluştur',
         footer: 'Bilimsel temellere dayalı odak yönetimi sistemi'
@@ -817,19 +854,56 @@ const App: React.FC = () => {
         subtitle: 'Neural Focus Engine',
         tagline: 'Scientifically based focus management',
         beta: VERSION.betaLabel,
-        hero: 'Write your tasks. AI plans. You focus.',
-        f1: 'AI Planning',
-        f1d: 'Fufit AI plans your tasks based on science.',
-        f2: 'Ultradian & Flow',
-        f2d: '90 min focus, 20 min reset. Align with your rhythm.',
-        f3: 'Social Focus',
-        f3d: 'Work together with friends, focus in rooms.',
-        f4: 'Analytics',
-        f4d: 'Track sessions and total focus time.',
-        howTitle: 'How it works?',
-        step1: 'Write your task in the left panel',
-        step2: 'AI creates a plan, adds to queue',
-        step3: 'Start the timer, focus',
+        heroKicker: 'AI-POWERED SOCIAL FOCUS PLATFORM',
+        heroHead1: 'Less scattered,',
+        heroHead2: 'deeper focus.',
+        heroSub: 'Tell AI what you want to work on. Fufit AI calculates your task scope and builds the best focus plan for you.',
+        ctaPrimary: 'Create free account',
+        ctaSecondary: 'Try demo mode',
+        trustLine: '8 Scientific Principles · Ultradian Rhythm · Flow State · Pomodoro+',
+        howTitle: 'Enter focus in three steps',
+        howKicker: 'HOW IT WORKS',
+        step1Title: 'Tell it what you want to work on',
+        step1Desc: 'Write to Fufit AI what you\'d like to tackle today. "Design a React component", "write an article", "study for the exam" — as much or as little detail as you like.',
+        step2Title: 'AI builds your plan',
+        step2Desc: 'It analyses the task, determines your focus profile, and breaks everything into 90-minute blocks. It decides what comes first and when you rest.',
+        step3Title: 'Work, then see your progress',
+        step3Desc: 'The timer starts and you just focus. When the session ends, the analytics panel shows how productive you were and which hours worked best for you.',
+        sciKicker: 'SCIENTIFIC FOUNDATION',
+        sciTitle: 'Not intuition — 8 psychological principles',
+        sciIntro: 'Every plan weighs these eight principles together so that focus length, break cadence and task order match your cognitive state.',
+        p1: 'Cognitive Load Theory',
+        p1d: 'Tasks are split into blocks that do not overload working memory.',
+        p2: 'Ultradian Rhythm',
+        p2d: '~90 min focus, 20 min reset — aligned with your brain\'s cycle.',
+        p3: 'Zeigarnik Effect',
+        p3d: 'Unfinished tasks occupy the mind; planning closes the loop.',
+        p4: 'Yerkes–Dodson Law',
+        p4d: 'Performance peaks at moderate arousal; difficulty is calibrated.',
+        p5: 'Ego Depletion',
+        p5d: 'Willpower drops across a session; hard work goes first.',
+        p6: 'Spacing Effect',
+        p6d: 'Distributed practice outperforms cramming for retention.',
+        p7: 'Flow Entry Latency',
+        p7d: 'Flow takes 15–20 min; the first block is kept uninterrupted.',
+        p8: 'Parkinson\'s Law',
+        p8d: 'Work fills the time; a timebox creates a real finish.',
+        featKicker: 'FEATURES',
+        featTitle: 'Everything you need to focus deeply',
+        f1: 'AI-Powered Planning',
+        f1d: 'Write what you want to work on, let Fufit AI handle the rest. It analyses task scope, difficulty and focus profile to build a plan made for you. No guessing.',
+        f2: 'Focus Profiles',
+        f2d: '5 profiles from Novice to Hyperfocus. Block length and break rhythm adapt to your cognitive state so you work without burning out or getting bored.',
+        f3: 'Focus Rooms',
+        f3d: 'Create silent co-working rooms with friends or strangers. Everyone works on their own thing while feeling the power of working together. Join in seconds with an invite code.',
+        f4: 'Pair Mode',
+        f4d: 'Pair with a single friend. Sync your focus rhythms and track each other\'s real-time status. Two people, in silence, motivating each other.',
+        f5: 'Analytics Panel',
+        f5d: 'Daily, weekly and monthly focus stats. Efficiency score per session, distribution charts and your work patterns — all on one screen. Discover when you work best.',
+        f6: 'AI Memory',
+        f6d: 'Fufit AI learns from your past sessions. Each new plan becomes a little more personal, a little more accurate. Your conversation history is preserved and context never breaks.',
+        finalTitle: 'Ready?',
+        finalSub: 'Your first session sets up in 60 seconds. No card needed.',
         login: 'Sign In',
         register: 'Create Account',
         footer: 'Scientifically based focus management system'
@@ -837,134 +911,232 @@ const App: React.FC = () => {
     };
     const texts = welcomeTexts[lang];
     const isDark = theme === 'dark';
+    const screenshot = isDark ? '/assets/tutorial/ana-ekran-dark.png' : '/assets/tutorial/ana-ekran-light.png';
+    const analytics = isDark ? '/assets/tutorial/analiz-panel.png' : '/assets/tutorial/analiz-panel-light.png';
+
+    // 8 bilimsel ilke için ikon seti (inline SVG path'leri)
+    const principles = [
+      { t: texts.p1, d: texts.p1d, icon: <><path d="M9 3a3 3 0 0 0-3 3v1a3 3 0 0 0-2 5 3 3 0 0 0 2 5v1a3 3 0 0 0 3 3h1V3z"/><path d="M15 3a3 3 0 0 1 3 3v1a3 3 0 0 1 2 5 3 3 0 0 1-2 5v1a3 3 0 0 1-3 3h-1V3z"/></> },
+      { t: texts.p2, d: texts.p2d, icon: <><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 4 21 10 15 10"/></> },
+      { t: texts.p3, d: texts.p3d, icon: <><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></> },
+      { t: texts.p4, d: texts.p4d, icon: <><path d="M3 18c3-8 15-8 18 0"/><line x1="12" y1="3" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="21"/></> },
+      { t: texts.p5, d: texts.p5d, icon: <><rect x="2" y="7" width="16" height="10" rx="2"/><line x1="22" y1="11" x2="22" y2="13"/><line x1="6" y1="12" x2="10" y2="12"/></> },
+      { t: texts.p6, d: texts.p6d, icon: <><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></> },
+      { t: texts.p7, d: texts.p7d, icon: <><path d="M2 12c2-3 4-3 6 0s4 3 6 0 4-3 6 0"/><path d="M2 18c2-3 4-3 6 0s4 3 6 0 4-3 6 0"/></> },
+      { t: texts.p8, d: texts.p8d, icon: <><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="M9 2h6"/></> },
+    ];
+
+    // Variant B (Editorial Light) paleti: açık #f7f6f2 / koyu #0a0a0a
+    const bg = isDark ? 'bg-[#0a0a0a]' : 'bg-[#f7f6f2]';
+    const bgPanel = isDark ? 'bg-white/[0.02]' : 'bg-white';
+    const textMain = isDark ? 'text-white' : 'text-[#0a0a0a]';
+    const textDim = isDark ? 'text-white/65' : 'text-[#0a0a0a]/65';
+    const textKicker = isDark ? 'text-white/50' : 'text-[#0a0a0a]/50';
+    const borderLine = isDark ? 'border-white/10' : 'border-[#0a0a0a]/10';
+    const ctaPrimary = isDark ? 'bg-white text-black hover:bg-white/90' : 'bg-[#0a0a0a] text-white hover:bg-[#0a0a0a]/90';
+    const ctaSecondary = isDark ? 'border-white/20 text-white hover:bg-white/5' : 'border-[#0a0a0a]/18 text-[#0a0a0a] hover:bg-[#0a0a0a]/5';
 
     return (
-      <div className={`fixed inset-0 w-full overflow-y-auto overscroll-contain transition-colors duration-300 ${isDark ? 'bg-[#0a0a0a]' : 'bg-slate-50'}`} data-theme={theme} lang={lang}>
-        {/* Header - full width */}
-        <header className={`sticky top-0 z-50 w-full border-b backdrop-blur-sm transition-colors duration-300 ${isDark ? 'border-white/10 bg-[#0a0a0a]/95' : 'border-slate-200 bg-white/95'}`}>
-          <div className="mx-auto flex w-full max-w-[1600px] items-center justify-between px-6 py-4 lg:px-12">
-            <div className="flex items-center gap-3">
-              <img src="/mascotbird/saksaganlogo.png" alt="FoClock AI" className="h-11 w-11 object-contain" />
-              <span className={`font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{texts.title}</span>
+      <div className={`fixed inset-0 w-full overflow-y-auto overscroll-contain transition-colors duration-300 ${bg}`} data-theme={theme} lang={lang}>
+        {/* Header */}
+        <header className={`sticky top-0 z-50 w-full border-b backdrop-blur-md transition-colors duration-300 ${borderLine} ${isDark ? 'bg-[#0a0a0a]/85' : 'bg-[#f7f6f2]/85'}`}>
+          <div className="mx-auto flex w-full max-w-[1600px] items-center justify-between px-6 py-4 lg:px-16">
+            <div className="flex items-center gap-2.5">
+              <img src="/mascotbird/saksaganlogo.png" alt="FoClock AI" className="h-8 w-8 object-contain" />
+              <span className={`font-extrabold tracking-[-0.01em] text-base ${textMain}`}>{texts.title}</span>
             </div>
-            <div className="flex items-center gap-2 sm:gap-3">
-              <button onClick={() => setTheme(isDark ? 'light' : 'dark')} className={`rounded-lg p-2 transition-colors ${isDark ? 'text-white/70 hover:bg-white/10 hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`} title={lang === 'tr' ? (isDark ? 'Açık tema' : 'Koyu tema') : (isDark ? 'Light theme' : 'Dark theme')}>
+            <div className="flex items-center gap-2 sm:gap-2.5">
+              <button onClick={() => setTheme(isDark ? 'light' : 'dark')} className={`rounded-lg p-2 transition-colors ${isDark ? 'text-white/70 hover:bg-white/10 hover:text-white' : 'text-[#0a0a0a]/60 hover:bg-[#0a0a0a]/5 hover:text-[#0a0a0a]'}`} title={lang === 'tr' ? (isDark ? 'Açık tema' : 'Koyu tema') : (isDark ? 'Light theme' : 'Dark theme')}>
                 {isDark ? (
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
                 ) : (
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
                 )}
               </button>
-              <button onClick={() => setLang(lang === 'tr' ? 'en' : 'tr')} className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${isDark ? 'border-white/20 text-white/70 hover:bg-white/5 hover:text-white' : 'border-slate-300 text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}>
+              <button onClick={() => setLang(lang === 'tr' ? 'en' : 'tr')} className={`rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold tracking-wide transition-colors ${isDark ? 'border-white/15 text-white/70 hover:bg-white/5 hover:text-white' : 'border-[#0a0a0a]/15 text-[#0a0a0a]/60 hover:bg-[#0a0a0a]/5 hover:text-[#0a0a0a]'}`}>
                 {lang === 'tr' ? 'EN' : 'TR'}
               </button>
-              <button onClick={() => { setIsLogin(true); setView('auth'); }} className={`rounded-lg border px-4 py-2 text-xs font-semibold transition-colors ${isDark ? 'border-white/20 text-white hover:bg-white/10' : 'border-slate-300 text-slate-800 hover:bg-slate-100'}`}>
+              <button onClick={() => { setIsLogin(true); setView('auth'); }} className={`hidden sm:inline-flex px-3.5 py-2 text-[13px] font-semibold transition-colors ${textMain}`}>
                 {texts.login}
               </button>
-              <button onClick={() => { setIsLogin(false); setView('auth'); }} className={`rounded-lg px-4 py-2 text-xs font-semibold transition-colors ${isDark ? 'bg-white text-black hover:bg-white/90' : 'bg-slate-900 text-white hover:bg-slate-800'}`}>
+              <button onClick={() => { setIsLogin(false); setView('auth'); }} className={`rounded-[10px] px-4 py-2.5 text-[13px] font-bold transition-colors ${ctaPrimary}`}>
                 {texts.register}
               </button>
             </div>
           </div>
         </header>
 
-        {/* Hero - full width */}
-        <section className="w-full px-6 py-16 lg:px-12 lg:py-24">
-          <div className="mx-auto max-w-[1600px]">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-12">
-              <div className="flex-1 relative">
-                <img src="/mascotbird/saksagan.PNG" alt="" className="absolute h-56 w-56 lg:h-72 lg:w-72 object-contain pointer-events-none select-none" style={{ top: '-120px', left: '50%', transform: 'translateX(-50%)' }} aria-hidden />
-                <span className="inline-block rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-6">
-                  {texts.beta}
-                </span>
-                <h1 className={`relative text-4xl font-black tracking-tight sm:text-5xl lg:text-6xl xl:text-7xl ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                  {texts.subtitle}
-                </h1>
-                <p className={`mt-4 max-w-xl text-lg lg:text-xl ${isDark ? 'text-white/60' : 'text-slate-600'}`}>
-                  {texts.hero}
-                </p>
-                <p className={`mt-2 text-sm ${isDark ? 'text-white/40' : 'text-slate-500'}`}>
-                  {texts.tagline}
-                </p>
-              </div>
-              <div className="flex-1 lg:max-w-[55%]">
-                <div className={`overflow-hidden rounded-2xl border shadow-2xl ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
-                  <img src={isDark ? '/assets/tutorial/ana-ekran-dark.png' : '/assets/tutorial/ana-ekran-light.png'} alt="FoClock AI" className="w-full h-auto object-contain" />
-                </div>
-              </div>
+        {/* Hero — Editorial centered */}
+        <section className="relative w-full px-6 pt-16 pb-10 lg:px-16 lg:pt-20 lg:pb-14">
+          <div className="relative mx-auto max-w-[1600px] text-center">
+            {/* Kicker with flanking lines */}
+            <div className={`text-[11px] font-extrabold tracking-[0.3em] mb-6 ${textKicker}`}>
+              <span className={`inline-block w-6 h-px align-middle mr-3 ${isDark ? 'bg-white/40' : 'bg-[#0a0a0a]/40'}`} />
+              {texts.heroKicker}
+              <span className={`inline-block w-6 h-px align-middle ml-3 ${isDark ? 'bg-white/40' : 'bg-[#0a0a0a]/40'}`} />
+            </div>
+            {/* Giant two-line headline */}
+            <h1 className={`font-extrabold tracking-[-0.03em] leading-[0.92] text-[48px] sm:text-[72px] lg:text-[96px] xl:text-[108px] text-balance ${textMain}`}>
+              {texts.heroHead1}<br />
+              <span className="font-medium italic" style={{ fontFamily: '"Instrument Serif", "EB Garamond", Georgia, serif' }}>{texts.heroHead2}</span>
+            </h1>
+            <p className={`max-w-[580px] mx-auto mt-7 text-[17px] sm:text-[19px] leading-[1.5] text-pretty ${textDim}`}>
+              {texts.heroSub}
+            </p>
+            <div className="mt-9 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3">
+              <button onClick={() => { setIsLogin(false); setView('auth'); }} className={`rounded-full px-6 py-[15px] text-[14px] font-bold transition-colors ${ctaPrimary}`}>
+                {texts.ctaPrimary}
+              </button>
+              <button onClick={() => { setIsLogin(true); setView('auth'); }} className={`rounded-full border px-6 py-[15px] text-[14px] font-semibold transition-colors ${ctaSecondary}`}>
+                {texts.ctaSecondary}
+              </button>
             </div>
           </div>
         </section>
 
-        {/* Features - 4 columns full width */}
-        <section className={`w-full border-t px-6 py-16 lg:px-12 lg:py-20 ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
-          <div className="mx-auto max-w-[1600px]">
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              {[
-                { title: texts.f1, desc: texts.f1d, icon: <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/> },
-                { title: texts.f2, desc: texts.f2d, icon: <><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></> },
-                { title: texts.f3, desc: texts.f3d, icon: <><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></> },
-                { title: texts.f4, desc: texts.f4d, icon: <path d="M18 20V10M12 20V4M6 20v-6"/> }
-              ].map((f, i) => (
-                <div key={i} className={`rounded-xl border p-6 transition-colors ${isDark ? 'border-white/10 bg-white/[0.02] hover:bg-white/[0.04]' : 'border-slate-200 bg-white hover:bg-slate-50'}`}>
-                  <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-lg ${isDark ? 'bg-white/10' : 'bg-slate-900'}`}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={isDark ? 'white' : 'white'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{f.icon}</svg>
+        {/* Product window with floating mascot */}
+        <section className="relative w-full px-6 lg:px-16 pb-6">
+          <div className="relative mx-auto max-w-[1300px]">
+            {/* mascot floating above, top-right */}
+            <img
+              src="/mascotbird/saksagan.PNG"
+              alt=""
+              aria-hidden
+              className="mascot-float absolute right-4 sm:right-8 lg:right-10 -top-16 sm:-top-20 lg:-top-24 h-24 w-24 sm:h-32 sm:w-32 lg:h-[150px] lg:w-[150px] object-contain pointer-events-none select-none z-10"
+              style={{ filter: 'drop-shadow(0 20px 30px rgba(10,10,10,0.25))' }}
+            />
+            <div className={`relative overflow-hidden rounded-[20px] border ${borderLine} ${bgPanel} shadow-[0_30px_80px_-30px_rgba(10,10,10,0.25),0_10px_30px_-10px_rgba(10,10,10,0.1)]`}>
+              {/* macOS window chrome */}
+              <div className={`flex items-center gap-2 border-b px-4 py-2.5 ${borderLine}`}>
+                <span className="h-[11px] w-[11px] rounded-full bg-[#ff5f57]"></span>
+                <span className="h-[11px] w-[11px] rounded-full bg-[#febc2e]"></span>
+                <span className="h-[11px] w-[11px] rounded-full bg-[#28c840]"></span>
+                <div className={`flex-1 text-center text-[11px] font-semibold tracking-wide ${isDark ? 'text-white/50' : 'text-[#0a0a0a]/50'}`}>foclock.ai / focus</div>
+              </div>
+              <img src={screenshot} alt="FoClock AI" className="w-full block" />
+            </div>
+          </div>
+        </section>
+
+        {/* Trust line */}
+        <div className="w-full px-6 lg:px-16 pt-4 pb-4">
+          <p className={`text-center text-[11px] tracking-[0.15em] ${textKicker}`}>{texts.trustLine}</p>
+        </div>
+
+        {/* 8 Scientific Principles */}
+        <section className={`w-full border-t px-6 py-20 lg:px-16 lg:py-28 ${borderLine} ${isDark ? '' : 'bg-white'}`}>
+          <div className="mx-auto max-w-[1300px]">
+            <div className="mb-14 max-w-2xl mx-auto text-center">
+              <p className={`mb-4 text-[11px] font-extrabold tracking-[0.3em] ${textKicker}`}>{texts.sciKicker}</p>
+              <h2 className={`text-[32px] sm:text-[44px] font-extrabold tracking-[-0.025em] leading-[1.05] text-balance ${textMain}`}>
+                <span className="font-medium italic" style={{ fontFamily: '"Instrument Serif", Georgia, serif' }}>{texts.sciTitle}</span>
+              </h2>
+              <p className={`mt-5 text-[16px] leading-[1.6] text-pretty ${textDim}`}>{texts.sciIntro}</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[1px] border border-[#0a0a0a]/10 dark:border-white/10 rounded-[16px] overflow-hidden" style={{ backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(10,10,10,0.08)' }}>
+              {principles.map((p, i) => (
+                <div key={i} className={`p-6 transition-colors ${isDark ? 'bg-[#0a0a0a] hover:bg-white/[0.03]' : 'bg-white hover:bg-[#f7f6f2]'}`}>
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-[10px] mb-4 ${isDark ? 'bg-white/5 text-white/80' : 'bg-[#0a0a0a]/5 text-[#0a0a0a]/80'}`}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">{p.icon}</svg>
                   </div>
-                  <h3 className={`font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{f.title}</h3>
-                  <p className={`mt-1 text-sm ${isDark ? 'text-white/50' : 'text-slate-600'}`}>{f.desc}</p>
+                  <div className={`text-[10px] font-extrabold tracking-[0.2em] mb-2 ${textKicker}`}>0{i+1}</div>
+                  <h3 className={`text-[15px] font-bold tracking-[-0.01em] leading-snug ${textMain}`}>{p.t}</h3>
+                  <p className={`mt-2 text-[13px] leading-[1.55] ${textDim}`}>{p.d}</p>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* How it works - full width */}
-        <section className={`w-full border-t px-6 py-16 lg:px-12 lg:py-20 ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
-          <div className="mx-auto max-w-[1600px]">
-            <h2 className={`mb-12 text-center text-sm font-semibold uppercase tracking-widest ${isDark ? 'text-white/50' : 'text-slate-500'}`}>
-              {texts.howTitle}
-            </h2>
-            <div className="flex flex-col lg:flex-row lg:items-stretch gap-8">
-              <div className={`flex-1 overflow-hidden rounded-2xl border ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
-                <img src={isDark ? '/assets/tutorial/ana-ekran-dark.png' : '/assets/tutorial/ana-ekran-light.png'} alt="FoClock AI" className="h-full w-full object-contain" />
-              </div>
-              <div className="flex lg:w-[380px] flex-col justify-center gap-8 lg:shrink-0">
-                {[
-                  { title: texts.step1, hint: lang === 'tr' ? 'Fufit AI hedefini bekliyor... alanına yazın' : 'Type in the Fufit AI input field' },
-                  { title: texts.step2, hint: lang === 'tr' ? 'Kuyruk bölümünde görevlerinizi görün' : 'See your tasks in the queue section' },
-                  { title: texts.step3, hint: lang === 'tr' ? 'Merkezdeki ▶ butonu ile başlatın' : 'Start with the ▶ button in the center' }
-                ].map((s, i) => (
-                  <div key={i} className="flex gap-4">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-sm font-bold text-emerald-600 dark:text-emerald-400">{i + 1}</span>
-                    <div>
-                      <h3 className={`font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>{s.title}</h3>
-                      <p className={`mt-1 text-sm ${isDark ? 'text-white/50' : 'text-slate-600'}`}>{s.hint}</p>
+        {/* How it works — 3 alternating steps */}
+        <section id="how" className={`w-full border-t px-6 py-20 lg:px-16 lg:py-28 ${borderLine}`}>
+          <div className="mx-auto max-w-[1300px]">
+            <div className="mb-16 text-center">
+              <p className={`mb-4 text-[11px] font-extrabold tracking-[0.3em] ${textKicker}`}>{texts.howKicker}</p>
+              <h2 className={`text-[32px] sm:text-[44px] font-extrabold tracking-[-0.025em] leading-[1.05] text-balance ${textMain}`}>{texts.howTitle}</h2>
+            </div>
+
+            <div className="flex flex-col gap-16 lg:gap-24">
+              {[
+                { n: 1, t: texts.step1Title, d: texts.step1Desc, img: screenshot },
+                { n: 2, t: texts.step2Title, d: texts.step2Desc, img: screenshot },
+                { n: 3, t: texts.step3Title, d: texts.step3Desc, img: analytics },
+              ].map((s, i) => {
+                const reverse = i % 2 === 1;
+                return (
+                  <div key={s.n} className={`flex flex-col ${reverse ? 'lg:flex-row-reverse' : 'lg:flex-row'} items-center gap-8 lg:gap-16`}>
+                    <div className="flex-1">
+                      <div className={`font-medium italic text-[56px] leading-none tracking-[-0.03em] ${isDark ? 'text-white/35' : 'text-[#0a0a0a]/30'}`} style={{ fontFamily: '"Instrument Serif", Georgia, serif' }}>0{s.n}</div>
+                      <h3 className={`mt-4 text-[26px] sm:text-[30px] font-bold tracking-[-0.02em] ${textMain}`}>{s.t}</h3>
+                      <p className={`mt-3 max-w-lg text-[16px] leading-[1.55] ${textDim}`}>{s.d}</p>
+                    </div>
+                    <div className="flex-1 w-full">
+                      <div className={`overflow-hidden rounded-[16px] border shadow-[0_20px_50px_-20px_rgba(10,10,10,0.2)] ${borderLine} ${bgPanel}`}>
+                        <img src={s.img} alt="" className="h-full w-full object-contain" />
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
+                );
+              })}
             </div>
           </div>
         </section>
 
-        {/* CTA - full width */}
-        <section className={`w-full border-t px-6 py-16 lg:px-12 lg:py-20 ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
-          <div className="mx-auto max-w-[1600px]">
-            <div className="flex flex-col items-center gap-6 sm:flex-row sm:justify-center">
-              <button onClick={() => { setIsLogin(true); setView('auth'); }} className={`w-full rounded-xl border px-8 py-4 font-semibold transition-colors sm:w-auto ${isDark ? 'border-white/20 text-white hover:bg-white/10' : 'border-slate-300 text-slate-800 hover:bg-slate-100'}`}>
-                {texts.login}
-              </button>
-              <button onClick={() => { setIsLogin(false); setView('auth'); }} className={`w-full rounded-xl px-8 py-4 font-semibold transition-colors sm:w-auto ${isDark ? 'bg-white text-black hover:bg-white/90' : 'bg-slate-900 text-white hover:bg-slate-800'}`}>
+        {/* Features */}
+        <section className={`w-full border-t px-6 py-20 lg:px-16 lg:py-28 ${borderLine}`}>
+          <div className="mx-auto max-w-[1300px]">
+            <div className="mb-14 text-center">
+              <p className={`mb-4 text-[11px] font-extrabold tracking-[0.3em] ${textKicker}`}>{texts.featKicker}</p>
+              <h2 className={`text-[32px] sm:text-[44px] font-extrabold tracking-[-0.025em] leading-[1.05] text-balance ${textMain}`}>{texts.featTitle}</h2>
+            </div>
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {[
+                { title: texts.f1, desc: texts.f1d, icon: <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/> },
+                { title: texts.f2, desc: texts.f2d, icon: <><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></> },
+                { title: texts.f3, desc: texts.f3d, icon: <><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></> },
+                { title: texts.f4, desc: texts.f4d, icon: <><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></> },
+                { title: texts.f5, desc: texts.f5d, icon: <path d="M18 20V10M12 20V4M6 20v-6"/> },
+                { title: texts.f6, desc: texts.f6d, icon: <><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></> },
+              ].map((f, i) => (
+                <div key={i} className={`rounded-[16px] border p-6 transition-colors ${borderLine} ${bgPanel} hover:${isDark ? 'bg-white/[0.04]' : 'bg-white'}`}>
+                  <div className={`mb-5 flex h-11 w-11 items-center justify-center rounded-[10px] ${isDark ? 'bg-white text-black' : 'bg-[#0a0a0a] text-white'}`}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{f.icon}</svg>
+                  </div>
+                  <h3 className={`text-[16px] font-bold tracking-[-0.01em] ${textMain}`}>{f.title}</h3>
+                  <p className={`mt-2 text-[14px] leading-[1.6] ${textDim}`}>{f.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Final CTA */}
+        <section className={`w-full border-t px-6 py-20 lg:px-16 lg:py-28 ${borderLine}`}>
+          <div className="mx-auto max-w-[1000px] text-center">
+            <h2 className={`text-[36px] sm:text-[56px] font-extrabold tracking-[-0.03em] leading-[0.98] text-balance ${textMain}`}>
+              {texts.finalTitle}
+            </h2>
+            <p className={`mt-5 text-[17px] leading-[1.5] ${textDim}`}>{texts.finalSub}</p>
+            <div className="mt-9 flex flex-col items-stretch sm:flex-row sm:items-center sm:justify-center gap-3">
+              <button onClick={() => { setIsLogin(false); setView('auth'); }} className={`rounded-full px-7 py-[15px] text-[14px] font-bold transition-colors ${ctaPrimary}`}>
                 {texts.register}
+              </button>
+              <button onClick={() => { setIsLogin(true); setView('auth'); }} className={`rounded-full border px-7 py-[15px] text-[14px] font-semibold transition-colors ${ctaSecondary}`}>
+                {texts.login}
               </button>
             </div>
           </div>
         </section>
 
         {/* Footer */}
-        <footer className={`w-full border-t px-6 py-8 lg:px-12 ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
-          <div className="mx-auto max-w-[1600px] text-center">
-            <p className={`text-[10px] tracking-widest ${isDark ? 'text-white/30' : 'text-slate-400'}`}>
+        <footer className={`w-full border-t px-6 py-8 lg:px-16 ${borderLine}`}>
+          <div className="mx-auto max-w-[1600px] flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <img src="/mascotbird/saksaganlogo.png" alt="" className="h-6 w-6 object-contain" />
+              <span className={`text-[12px] font-bold ${textMain}`}>{texts.title}</span>
+              <span className={`text-[10px] tracking-widest ${textKicker}`}>· {texts.beta}</span>
+            </div>
+            <p className={`text-[10px] tracking-[0.15em] ${textKicker}`}>
               {texts.footer}
             </p>
           </div>
