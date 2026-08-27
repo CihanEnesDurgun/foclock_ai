@@ -22,3 +22,14 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+.vercel
+
+# Claude Code çalışma alanı — worktree kopyaları .env.local ve eski
+# hardcoded anahtar içeren dosyalar barındırır, asla commit edilmemeli.
+.claude/
+
+# Ortam değişkenleri (savunma katmanı — *.local zaten yakalıyor)
+.env
+.env.*
+!.env.local.example

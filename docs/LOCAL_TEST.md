@@ -35,18 +35,41 @@ Supabase Dashboard → SQL Editor'da sırayla çalıştır:
 `.env.local` dosyasında:
 
 ```
+# Client (Vite tarafından bundle'a gömülür — yalnızca public değerler!)
 VITE_SUPABASE_URL=your_supabase_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_SUPABASE_ANON_KEY=your_supabase_publishable_key
+
+# Sunucu tarafı (VITE_ öneki YOK — bundle'a asla gömülmez)
 GEMINI_API_KEY=your_gemini_api_key
 ```
 
+> `VITE_` öneki olan her değişken client'a gömülür. Gizli kalması gereken
+> hiçbir değeri `VITE_` önekiyle tanımlamayın.
+
 ### 4. Uygulamayı Başlat
+
+**AI özellikleri olmadan (yalnızca arayüz / Supabase):**
 
 ```bash
 npm run dev
 ```
 
-Tarayıcıda `http://localhost:5173` adresine gidin.
+**AI özellikleri dahil — önerilen:**
+
+Gemini çağrıları `/api/gemini` serverless fonksiyonundan geçer. Vite dev
+sunucusu serverless fonksiyon çalıştırmaz, bu yüzden `vercel dev` gerekir:
+
+```bash
+npx vercel dev
+```
+
+> **Neden `VITE_GEMINI_API_KEY` yok?**
+> Vite, `VITE_` önekli tüm değişkenleri client bundle'ına **düz metin olarak
+> gömer**. Eski "geliştirme fallback'i" bu yüzden kaldırıldı — build ortamında
+> o değişken tanımlıysa API anahtarı doğrudan sızıyordu. Anahtar yalnızca
+> `GEMINI_API_KEY` (öneksiz) olarak, yalnızca sunucu tarafında okunur.
+
+Tarayıcıda `http://localhost:5173` (veya `vercel dev` çıktısındaki port) adresine gidin.
 
 ## Test Senaryoları
 

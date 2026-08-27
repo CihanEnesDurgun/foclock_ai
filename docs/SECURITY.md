@@ -1,8 +1,8 @@
 # SECURITY.md — FoClock AI Güvenlik Denetim Raporu
 
 **İlk Denetim:** 2026-04-14  
-**Son Güncelleme:** 2026-04-14  
-**Sürüm:** Neural Beta 1.5.D  
+**Son Güncelleme:** 2026-08-27  
+**Sürüm:** Neural Beta 1.5.E  
 **Denetim Kapsamı:** Kaynak kodu statik analizi + RLS simülasyonu + build artifact riski  
 **İlk Durum:** 3 KRİTİK · 3 YÜKSEK · 4 ORTA · 2 DÜŞÜK  
 **Güncel Durum:** ~~3 KRİTİK~~ · ~~3 YÜKSEK~~ · ~~4 ORTA~~ · ~~2 DÜŞÜK~~ → **TÜMÜ KAPATILDI**
@@ -34,6 +34,59 @@
 
 ---
 
+## İKİNCİ DENETİM — 2026-08-27 (Neural Beta 1.5.E)
+
+Birinci denetimin kapattığı bulgular doğrulandı. Ancak bazı düzeltmelerin
+**etkisiz kaldığı** veya yeni yüzeyler açtığı tespit edildi.
+
+| Bulgu | Seviye | Durum | Düzeltme |
+|-------|--------|-------|----------|
+| [K-1] Gemini anahtarı production bundle'ında yayınlanmış | KRİTİK | **KOD TARAFI KAPATILDI — ANAHTAR ROTASYONU BEKLİYOR** | Sızıntı yolu kapatıldı; anahtarın Google AI Studio'dan iptali **manuel adım** |
+| [K-2] `/api/gemini` kimlik doğrulamasız açık proxy | KRİTİK | **KAPATILDI** | Supabase JWT zorunlu + model allowlist + rate limit + boyut sınırı (`api/gemini.ts`) |
+| [Y-1] `friend_requests` taraf değiştirme ile rızasız arkadaşlık | YÜKSEK | **KAPATILDI** | Değişmezlik trigger'ı + durum geçiş kontrolü (`009_authz_hardening.sql`) |
+| [Y-2] Arkadaşlık kontrolü yalnızca client-side | YÜKSEK | **KAPATILDI** | `are_friends()` ile RLS `WITH CHECK` (`009_authz_hardening.sql`) |
+| [O-1] CI, anahtarı client bundle'a gömüyordu | ORTA | **KAPATILDI** | `VITE_GEMINI_API_KEY` CI'dan kaldırıldı + bundle sır taraması eklendi |
+| [O-2] `SECURITY.md` public repoda canlı proje bilgisi | ORTA | **KAPATILDI** | Proje ref'i ve anahtar redakte edildi |
+| [O-3] Bağımlılık açıkları (protobufjs RCE dahil) | ORTA | **KAPATILDI** | Kullanılmayan `@google/genai` kaldırıldı, `supabase-js` güncellendi → 0 açık |
+| [O-4] `dompurify` bağımlılıktan düşmüş, build kırık | ORTA | **KAPATILDI** | `package.json` onarıldı |
+| [O-5] `.claude/` ignore edilmiyordu | ORTA | **KAPATILDI** | `.gitignore`'a eklendi — worktree kopyaları `.env.local` içeriyordu |
+| [D-1] CSP `unsafe-inline`/`unsafe-eval`, ölü 3P script | DÜŞÜK | **KAPATILDI** | `script-src 'self'`; kullanılmayan GSI script'i ve esm.sh importmap'i kaldırıldı |
+
+### [K-1] Ayrıntı — anahtar rotasyonu neden hâlâ gerekli
+
+`vite.config.ts`'ten `define` kaldırılmış olmasına rağmen sızıntı devam
+ediyordu: **Vite, `VITE_` önekli `process.env` değişkenlerini `define`
+olmadan da bundle'a gömer.** `geminiService.ts` `import.meta.env.VITE_GEMINI_API_KEY`
+okuduğu ve `ci.yml` bu değişkeni set ettiği sürece anahtar her build'de
+pakete giriyordu.
+
+2026-04-03 tarihli production build'inde anahtar düz metin olarak yer aldı ve
+her ziyaretçiye servis edildi. **Bir kez public servis edilmiş anahtar yanmıştır**
+— kod düzeltmesi geçmişteki sızıntıyı geri alamaz.
+
+**Manuel adım:** Google AI Studio → eski anahtarı sil → yeni anahtar üret →
+Vercel'de yalnızca `GEMINI_API_KEY` (öneksiz) olarak tanımla.
+
+### Regresyon koruması
+
+`.github/workflows/ci.yml` artık her build'de `dist/` içinde API anahtarı
+deseni arar ve bulursa build'i kırar. Bu, K-1/O-1 sınıfı sızıntının sessizce
+geri gelmesini engeller.
+
+### Açık kalan / doğrulanamayan
+
+- **Canlı RLS doğrulaması yapılamadı.** Supabase projesi denetim sırasında
+  bağlantı zaman aşımı veriyordu (muhtemelen duraklatılmış). `009` migration'ı
+  uygulandıktan sonra Y-1 ve Y-2 canlı ortamda test edilmelidir.
+- **Rate limit serverless instance belleğindedir**, instance'lar arası
+  paylaşılmaz. Asıl kapı kimlik doğrulamadır. Sıkı garanti gerekirse
+  Supabase tablosu veya Upstash Redis'e taşınmalıdır.
+- **Anon key git geçmişinde kalmaya devam ediyor** (`services/supabase.ts:4`,
+  ~30 commit). Publishable key public-by-design olduğu için acil değil; depo
+  gizliye alınınca yüzey tamamen kapanır.
+
+---
+
 ## KRİTİK BULGULAR
 
 ---
@@ -43,8 +96,8 @@
 **Dosya:** `src/services/supabase.ts:3-4`
 
 ```typescript
-const SUPABASE_URL = 'https://YOUR_PROJECT_REF.supabase.co';
-const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_PUBLISHABLE_KEY';
+const SUPABASE_URL = 'https://<PROJECT_REF>.supabase.co';
+const SUPABASE_ANON_KEY = '<SUPABASE_PUBLISHABLE_KEY>';
 ```
 
 **Risk:** Supabase `anon` key tek başına doğrudan RLS korumasız tablolara erişim sağlamaz; ancak bu değer Git geçmişine kaydedildiğinde:
@@ -55,9 +108,9 @@ const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_PUBLISHABLE_KEY';
 **Simülasyon:**
 ```bash
 # Dışarıdan doğrudan API erişimi
-curl 'https://YOUR_PROJECT_REF.supabase.co/rest/v1/profiles?select=*' \
-  -H 'apikey: YOUR_SUPABASE_PUBLISHABLE_KEY' \
-  -H 'Authorization: Bearer YOUR_SUPABASE_PUBLISHABLE_KEY'
+curl 'https://<PROJECT_REF>.supabase.co/rest/v1/profiles?select=*' \
+  -H 'apikey: <SUPABASE_PUBLISHABLE_KEY>' \
+  -H 'Authorization: Bearer <SUPABASE_PUBLISHABLE_KEY>'
 # → RLS koruması varsa 0 satır, yoksa tüm profiller
 ```
 
@@ -74,8 +127,8 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
 
 `.env.local`:
 ```
-VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
-VITE_SUPABASE_ANON_KEY=YOUR_SUPABASE_PUBLISHABLE_KEY
+VITE_SUPABASE_URL=https://<PROJECT_REF>.supabase.co
+VITE_SUPABASE_ANON_KEY=<SUPABASE_PUBLISHABLE_KEY>
 ```
 
 `.gitignore`'a `.env.local` ekli olduğunu doğrula.
@@ -205,7 +258,7 @@ GRANT EXECUTE ON FUNCTION create_user_profile(uuid, text, text, text, text, text
 
 **Simülasyon:**
 ```bash
-curl -X POST 'https://YOUR_PROJECT_REF.supabase.co/rest/v1/rpc/create_user_profile' \
+curl -X POST 'https://<PROJECT_REF>.supabase.co/rest/v1/rpc/create_user_profile' \
   -H 'apikey: <ANON_KEY>' \
   -H 'Content-Type: application/json' \
   -d '{

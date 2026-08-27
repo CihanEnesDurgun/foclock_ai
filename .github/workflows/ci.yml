@@ -21,8 +21,21 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # [O-1] Build'e HİÇBİR VITE_ önekli sır verilmez.
+      # Vite, VITE_ önekli process.env değişkenlerini client bundle'a düz metin
+      # gömer. GEMINI_API_KEY yalnızca Vercel'de serverless runtime değişkeni
+      # olarak tanımlıdır; build adımının ona erişmesi gerekmez.
       - name: Build
-        env:
-          VITE_GEMINI_API_KEY: ${{ secrets.VITE_GEMINI_API_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: npm run build
+
+      # [K-1] Regresyon koruması: derlenmiş pakete sır sızarsa build kırılır.
+      - name: Bundle sır taraması
+        run: |
+          if grep -rIoE 'AIza[0-9A-Za-z_-]{30,}|sb_secret_[A-Za-z0-9_.-]{10,}|eyJhbGciOi[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}' dist/; then
+            echo "::error::Derlenmiş pakette API anahtarı/sır tespit edildi."
+            exit 1
+          fi
+          echo "Bundle temiz."
+
+      - name: Bağımlılık denetimi
+        run: npm audit --omit=dev --audit-level=high

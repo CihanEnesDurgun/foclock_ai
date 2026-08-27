@@ -38,22 +38,15 @@ export const cleanMarkdown = formatMessage;
 
 // ---------------------------------------------------------------------------
 // Gemini API Proxy — key yalnızca server tarafında, client'ta sızma riski yok
-// Production: /api/gemini (Vercel serverless)
-// Geliştirme: VITE_GEMINI_API_KEY varsa doğrudan SDK kullanır (fallback)
+// Tüm ortamlarda /api/gemini üzerinden gider (Vercel serverless).
+//
+// [O-1] Eski "geliştirme fallback'i" kaldırıldı: VITE_ önekli değişkenler Vite
+// tarafından client bundle'a düz metin gömülür. VITE_GEMINI_API_KEY okumak,
+// build ortamında o değişken tanımlıysa anahtarı doğrudan sızdırıyordu.
+// Yerel geliştirme için `vercel dev` kullanın — bkz. docs/LOCAL_TEST.md
 // ---------------------------------------------------------------------------
 
-// Geliştirme ortamında doğrudan SDK kullanımı (opsiyonel, sadece localhost)
-const devApiKey = import.meta.env.VITE_GEMINI_API_KEY;
-let devAI: import("@google/genai").GoogleGenAI | null = null;
-
-async function getDevAI() {
-  if (!devApiKey) return null;
-  if (!devAI) {
-    const { GoogleGenAI } = await import("@google/genai");
-    devAI = new GoogleGenAI({ apiKey: devApiKey });
-  }
-  return devAI;
-}
+import { supabase } from './supabase';
 
 // Tip sabitleri (SDK bağımlılığı olmadan, proxy için kullanılır)
 const SchemaType = {
@@ -71,29 +64,22 @@ interface GeminiCallParams {
   responseSchema?: unknown;
 }
 
-// Proxy veya SDK üzerinden Gemini çağrısı
+// Gemini çağrısı — daima /api/gemini proxy'si üzerinden
 async function callGemini(params: GeminiCallParams): Promise<string> {
   const { model, contents, systemInstruction, responseMimeType, responseSchema } = params;
 
-  // Geliştirme ortamı: doğrudan SDK (key .env.local'den gelir, bundle'a gömülmez)
-  const ai = await getDevAI();
-  if (ai) {
-    const response = await ai.models.generateContent({
-      model,
-      contents,
-      config: {
-        ...(systemInstruction ? { systemInstruction } : {}),
-        ...(responseMimeType ? { responseMimeType } : {}),
-        ...(responseSchema ? { responseSchema } : {}),
-      },
-    });
-    return response.text?.trim() ?? '';
+  // [K-2] Proxy artık kimlik doğrulaması istiyor; oturum access token'ı gönderilir
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) {
+    throw new Error('AI özelliklerini kullanmak için oturum açmanız gerekiyor.');
   }
 
-  // Production: Vercel serverless proxy
   const res = await fetch('/api/gemini', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${session.access_token}`,
+    },
     body: JSON.stringify({
       model,
       contents,
@@ -106,8 +92,12 @@ async function callGemini(params: GeminiCallParams): Promise<string> {
   });
 
   if (!res.ok) {
+    if (res.status === 401) throw new Error('Oturumunuz sonlanmış. Lütfen tekrar giriş yapın.');
+    if (res.status === 429) throw new Error('Çok fazla istek gönderildi. Lütfen biraz bekleyin.');
+    // Sunucu hata detayı kullanıcıya sızdırılmaz, yalnızca konsola yazılır
     const errData = await res.json().catch(() => ({}));
-    throw new Error(`Gemini proxy hatası: ${res.status} — ${JSON.stringify(errData)}`);
+    console.error('[geminiService] proxy hatası:', res.status, errData);
+    throw new Error('AI servisine ulaşılamadı. Lütfen tekrar deneyin.');
   }
 
   const data = await res.json();
