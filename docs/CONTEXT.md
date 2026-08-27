@@ -11,7 +11,7 @@ Geçmiş kararları, mevcut teknik borcu ve öncelikleri özetler.
 |------|-------|
 | Ürün adı | FoClock AI |
 | Motor adı | Fufit Neural Engine |
-| Mevcut sürüm | Neural Beta 1.5.D |
+| Mevcut sürüm | Neural Beta 1.5.E |
 | `package.json` versiyonu | 1.5.1 |
 | Sürüm dosyası | `src/version.ts` → `VERSION` objesi |
 | Geliştirici | Cihan |
@@ -80,15 +80,16 @@ src/
 
 ## Bilinen Teknik Borç
 
-### 1. Supabase Credentials Hardcoded
-- **Durum:** `src/services/supabase.ts` içinde `supabaseUrl` ve `supabaseAnonKey` doğrudan kodda tanımlı.
-- **Risk:** Kaynak kodu paylaşıldığında sızar.
-- **Çözüm:** `VITE_SUPABASE_URL` ve `VITE_SUPABASE_ANON_KEY` env değişkenlerine taşı.
+### 1. ~~Supabase Credentials Hardcoded~~ — KAPATILDI (1.5.E)
+- `src/services/supabase.ts` artık `import.meta.env.VITE_SUPABASE_*` okuyor,
+  değişkenler eksikse uygulama açılışta hata veriyor.
+- Publishable (anon) anahtar tasarım gereği istemcide görünürdür; asıl koruma
+  RLS politikalarıdır. Bkz. [`SECURITY.md`](SECURITY.md).
 
 ### 2. RLS Politika Tutarsızlıkları
 - **Durum:** `006_fix_rls.sql` bu sorunları kısmen giderir; ancak yeni tablolar eklendiğinde tekrarlıyor.
 - **Semptom:** Kayıt sırasında `profiles` için `violates row-level security` hatası.
-- **Çözüm:** `create_user_profile` RPC'si `SECURITY DEFINER` olarak çalışıyor — migration sırasıyla uygulanmadığında bozulur. Her deploy sonrası 001 → 007 sırasıyla yeniden çalıştırılmalı.
+- **Çözüm:** `create_user_profile` RPC'si `SECURITY DEFINER` olarak çalışıyor — migration sırasıyla uygulanmadığında bozulur. Her deploy sonrası 001 → 009 sırasıyla yeniden çalıştırılmalı.
 
 ### 3. `calendarService.ts` Tamamlanmamış
 - Takvim senkronizasyonu iskelet seviyesinde. `PomodoroSession.syncedToCalendar` alanı var ama backend yok.
@@ -103,12 +104,12 @@ src/
 
 ## Geliştirme Öncelikleri (Sıralı)
 
-1. **Supabase credentials → env vars** (güvenlik)
-2. **RLS migration tekrarlanabilirliği** — tek script ya da Supabase CLI workflow
-3. **`focusScore` algoritması** — oturum kalitesi skoru
-4. **`calendarService` tamamlama** — Google Calendar / iCal export
-5. **Demo modu Supabase izolasyonu** — gerçek DB çağrısı yapmamalı
-6. **Mobil responsive iyileştirme** — geniş ekran varsayımlı layout'lar
+1. **RLS migration tekrarlanabilirliği** — tek script ya da Supabase CLI workflow
+2. **`focusScore` algoritması** — oturum kalitesi skoru
+3. **`calendarService` tamamlama** — Google Calendar / iCal export
+4. **Demo modu Supabase izolasyonu** — gerçek DB çağrısı yapmamalı
+5. **Mobil responsive iyileştirme** — geniş ekran varsayımlı layout'lar
+6. **Dağıtık rate limit** — `/api/gemini` limiti şu an instance belleğinde
 
 ---
 
@@ -118,5 +119,5 @@ src/
 |-------|---------|
 | Trigger yok, profil client'tan oluşturuluyor | Email confirmation açık olduğunda trigger tetiklenmiyor; `create_user_profile` RPC ile bypass edildi |
 | `SECURITY DEFINER` RPC'ler | RLS recursive döngüsünü önlemek için; `is_room_member`, `is_room_host`, `get_friends` bu şekilde tanımlı |
-| `room_code` 6 karakter alfanümerik | Karışıklık yaratan 0/O, 1/I/L karakterleri çıkarılmış |
+| `room_code` 8 karakter alfanümerik | Karışıklık yaratan 0/O, 1/I/L karakterleri çıkarılmış |
 | `user_a < user_b` kısıtı `co_work_pairs`'de | Aynı çifti iki yönde eklemesini engeller |

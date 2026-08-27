@@ -43,7 +43,7 @@ This release focuses on welcome screen overhaul and user experience improvements
 - Vercel account (if deploying to Vercel)
 - Environment variables configured:
   - `GEMINI_API_KEY` - Google Gemini API key
-  - Supabase credentials (if not hardcoded)
+  - Supabase credentials (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`)
 
 ### Automatic Deployment (Vercel)
 

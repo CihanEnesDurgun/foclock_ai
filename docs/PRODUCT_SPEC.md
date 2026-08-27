@@ -96,7 +96,7 @@ Kullanıcı B → kabul et   → co_work_pairs kaydı oluşur
 ### 4.4 Odalar (Room Mode)
 ```
 Host → rooms kaydı oluşturur (generate_room_code RPC)
-Üye  → join_room_by_code RPC ile 6 karakterli koda girer
+Üye  → join_room_by_code RPC ile 8 karakterli koda girer
        → room_members kaydı eklenir
 Host → room_sessions başlatır (ortak timer)
 Üyeler → Supabase Realtime ile senkron güncelleme alır

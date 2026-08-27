@@ -1,5 +1,61 @@
 # Changelog
 
+## [1.5.E] – Güvenlik Sıkılaştırma ve Public Repo Hazırlığı (2026-08-27)
+
+### Güvenlik
+
+- **Gemini proxy'sine kimlik doğrulama.** `/api/gemini` daha önce kimlik
+  doğrulaması olmadan herkese açıktı; herkes Gemini kotasını ücretsiz LLM
+  proxy'si olarak kullanabiliyordu. Artık Supabase JWT zorunlu. Ayrıca model
+  allowlist (URL path injection önlemi), kullanıcı başına rate limit ve payload
+  boyut sınırı eklendi. Anahtar query string yerine `x-goog-api-key` header'ıyla
+  gönderiliyor.
+- **Anahtar sızıntı yolu kapatıldı.** Vite, `VITE_` önekli `process.env`
+  değişkenlerini `define` bloğu olmasa bile pakete gömüyor. `geminiService.ts`
+  bu değişkeni okuduğu ve `ci.yml` onu set ettiği için anahtar her build'de
+  pakete giriyordu. Dev SDK fallback'i kaldırıldı, CI'dan değişken çıkarıldı ve
+  `dist/` için sır tarama adımı eklendi.
+- **RLS: rızasız arkadaşlık kurma engellendi.** `friend_requests` UPDATE
+  politikası tarafların değiştirilmesini engellemiyordu; saldırgan kendisine
+  gelen bir isteğin `from_user_id` alanını kurbanla değiştirip kabul ederek
+  kurbanın aktif oturum başlıklarına erişebiliyordu. Değişmezlik trigger'ı
+  eklendi.
+- **RLS: arkadaşlık kontrolü sunucuya taşındı.** `co_work_pairs` ve
+  `pair_invites` için kontrol yalnızca istemcideydi; herkes istediği kullanıcıyla
+  zorla eşleşebiliyor veya başkası adına davet uydurabiliyordu. `are_friends()`
+  ile politika seviyesine alındı.
+- **PUBLIC EXECUTE kaldırıldı.** `SECURITY DEFINER` fonksiyonlarında
+  `REVOKE ... FROM anon` etkisizdi; PostgreSQL varsayılan olarak PUBLIC'e
+  EXECUTE verir ve `anon` bunu miras alır. Yetkiler açıkça atandı, `anon`
+  yalnızca `check_username_available` çağırabiliyor.
+- **Şifre politikası sunucuda dayatıldı.** İstemci 12 karakter istiyordu ama
+  Supabase Auth minimum 6'daydı; API'ye doğrudan istek atan biri zayıf şifreyle
+  kayıt olabiliyordu. Dashboard ayarı 12 + büyük/küçük harf + rakam olarak
+  istemciyle eşitlendi.
+- **CSP sıkılaştırıldı.** `script-src 'self'` — `unsafe-inline` ve `unsafe-eval`
+  kaldırıldı. Kullanılmayan Google Identity script'i ve ölü esm.sh importmap'i
+  `index.html`'den silindi.
+
+### Bağımlılıklar
+
+- Kullanılmayan `@google/genai` kaldırıldı (yalnızca dev fallback'i için
+  duruyordu). Bu, kritik `protobufjs` RCE dahil 7 açığı kapattı.
+- `@supabase/supabase-js` güncellendi. `npm audit --omit=dev` → 0 açık.
+- `dompurify` yeniden bağımlılık listesine alındı (düşmüştü, build kırıktı).
+
+### Dokümantasyon
+
+- README sıfırdan yazıldı; sürüm, mimari ve migration bilgileri gerçekle eşitlendi.
+- `.github/SECURITY.md` (açık bildirim politikası) ve `COPYRIGHT.md` eklendi.
+- `ARCH.md`, `CONTEXT.md`, `PRODUCT_SPEC.md` güncel mimariye göre düzeltildi.
+
+### Altyapı
+
+- CI'a bundle sır taraması ve `npm audit` adımları eklendi.
+- `.claude/` gitignore'a alındı — worktree kopyaları `.env.local` içeriyordu.
+
+---
+
 ## [1.5.D] – Adaptive AI Core: Fufit AI v2 (2026-04-12)
 
 ### AI / Prompt Engineering

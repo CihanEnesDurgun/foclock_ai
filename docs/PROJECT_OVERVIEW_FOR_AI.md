@@ -153,7 +153,7 @@ Kod seviyesinde detaylar `types.ts` içinde; burada sadece yüksek seviye kavram
 
 - **VITE_SUPABASE_URL** ve **VITE_SUPABASE_ANON_KEY** (önerilen yapı)
   - Supabase URL ve public anon key bilgileri.
-  - İdeal olarak environment üzerinden geçmeli; şu an projede hardcoded kısımlar olsa da, üretim için env kullanılması tavsiye edilir.
+  - Tüm credential'lar environment değişkenlerinden okunur; kaynak kodda hardcoded değer yoktur. Gemini anahtarı yalnızca sunucu tarafındadır (`api/gemini.ts`).
 
 Diğer AI araçlarına bu projeyi tanıtırken, gerektiğinde:
 - Supabase instance’ınızın tablo şemalarına,

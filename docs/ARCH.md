@@ -17,12 +17,14 @@
 │        supabase.ts        geminiService.ts        │
 └───────────────┼──────────────┼───────────────────┘
                 │              │
-    ┌───────────▼──┐    ┌──────▼────────────┐
-    │   Supabase   │    │   Google Gemini   │
-    │  PostgreSQL  │    │       API         │
-    │  Auth        │    │  (REST, API Key)  │
-    │  Realtime    │    └───────────────────┘
-    └──────────────┘
+    ┌───────────▼──┐    ┌──────▼─────────────────┐
+    │   Supabase   │    │  /api/gemini (Vercel)  │
+    │  PostgreSQL  │    │  JWT · allowlist · RL  │
+    │  Auth        │    └──────┬─────────────────┘
+    │  Realtime    │           │ GEMINI_API_KEY
+    └──────────────┘    ┌──────▼─────────────────┐
+                        │   Google Gemini API    │
+                        └────────────────────────┘
 ```
 
 ---
@@ -32,8 +34,8 @@
 ### 2.1 Teknoloji Stack
 | Katman | Teknoloji |
 |--------|-----------|
-| Build | Vite 5.x |
-| UI Kütüphanesi | React 18 |
+| Build | Vite 6.x |
+| UI Kütüphanesi | React 19 |
 | Dil | TypeScript (strict) |
 | Stil | Tailwind CSS (Vite plugin) |
 | State | React `useState` / `useEffect` — harici state kütüphanesi yok |
@@ -67,16 +69,24 @@ src/
 
 ### 2.3 Vite Konfigürasyonu (`vite.config.ts`)
 
-```typescript
-// API key hem VITE_GEMINI_API_KEY hem de GEMINI_API_KEY olarak yüklenebilir
-const apiKey = env.VITE_GEMINI_API_KEY || env.GEMINI_API_KEY;
+Config'te `define` bloğu **bilinçli olarak yoktur**. Gemini anahtarı istemci
+paketine hiçbir şekilde girmez; tüm yapay zekâ çağrıları `/api/gemini`
+serverless proxy'sinden geçer.
 
-define: {
-  'import.meta.env.VITE_GEMINI_API_KEY': JSON.stringify(apiKey),
-  'process.env.API_KEY': JSON.stringify(apiKey),
-  'process.env.GEMINI_API_KEY': JSON.stringify(apiKey)
-}
+```typescript
+export default defineConfig(({ mode }) => {
+  loadEnv(mode, '.', '');
+  return {
+    server: { port: 3000, host: '0.0.0.0' },
+    plugins: [react(), tailwindcss()],
+    resolve: { alias: { '@': path.resolve(__dirname, 'src') } }
+  };
+});
 ```
+
+> **Kritik kural:** Vite, `VITE_` önekli `process.env` değişkenlerini `define`
+> bloğu olmasa bile pakete gömer. Bu yüzden hiçbir gizli değer `VITE_` önekiyle
+> tanımlanmaz ve CI her build'de `dist/` içinde anahtar deseni arar.
 
 `@tailwindcss/vite` plugin olarak kullanılıyor — ayrı PostCSS config yok.
 
@@ -174,9 +184,18 @@ Supabase: ai_messages kayıt / active_sessions güncelleme
 ```
 
 ### 4.2 API Key Yönetimi
-- Geliştirme: `.env.local` → `GEMINI_API_KEY=...`
-- Vercel: Environment Variables paneli → `GEMINI_API_KEY`
-- Vite build-time'da `process.env.API_KEY` ve `import.meta.env.VITE_GEMINI_API_KEY` olarak enjekte edilir
+
+Anahtar yalnızca sunucu tarafında bulunur, hiçbir aşamada istemciye inmez.
+
+- Geliştirme: `.env.local` → `GEMINI_API_KEY=...` (VITE_ öneki **yok**)
+- Vercel: Environment Variables → `GEMINI_API_KEY`, Sensitive olarak işaretli
+- İstemci `/api/gemini` proxy'sine `Authorization: Bearer <supabase_jwt>` ile gider
+- Proxy JWT'yi Supabase Auth'a doğrulatır, ardından anahtarı `x-goog-api-key`
+  header'ında Gemini'ye iletir
+
+Proxy ayrıca model allowlist'i (`gemini-3-flash-preview`, `gemini-3-pro-preview`),
+kullanıcı başına rate limit ve payload boyut sınırı uygular. Ayrıntı:
+[`SECURITY.md`](SECURITY.md)
 
 ### 4.3 Hata Yönetimi
 Gemini yanıtı beklenen format dışındaysa parse hatası loglanır, kullanıcıya genel hata mesajı gösterilir. Retry mekanizması yok (tek istek prensibi).
