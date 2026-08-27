@@ -51,6 +51,7 @@ Birinci denetimin kapattığı bulgular doğrulandı. Ancak bazı düzeltmelerin
 | [O-4] `dompurify` bağımlılıktan düşmüş, build kırık | ORTA | **KAPATILDI** | `package.json` onarıldı |
 | [O-5] `.claude/` ignore edilmiyordu | ORTA | **KAPATILDI** | `.gitignore`'a eklendi — worktree kopyaları `.env.local` içeriyordu |
 | [D-1] CSP `unsafe-inline`/`unsafe-eval`, ölü 3P script | DÜŞÜK | **KAPATILDI** | `script-src 'self'`; kullanılmayan GSI script'i ve esm.sh importmap'i kaldırıldı |
+| [H-1b] `008`'in anon revoke'u **etkisizdi** | YÜKSEK | **KAPATILDI** | PUBLIC EXECUTE kaldırıldı, yetkiler açıkça atandı (`009_authz_hardening.sql`) |
 
 ### [K-1] Ayrıntı — anahtar rotasyonu neden hâlâ gerekli
 
@@ -67,6 +68,57 @@ her ziyaretçiye servis edildi. **Bir kez public servis edilmiş anahtar yanmı�
 **Manuel adım:** Google AI Studio → eski anahtarı sil → yeni anahtar üret →
 Vercel'de yalnızca `GEMINI_API_KEY` (öneksiz) olarak tanımla.
 
+### [H-1b] Ayrıntı — `008`'in H-1 düzeltmesi neden işe yaramamıştı
+
+`008_security_hardening.sql` şunu yapıyordu:
+
+```sql
+REVOKE EXECUTE ON FUNCTION create_user_profile(...) FROM anon;
+```
+
+Bu **hiçbir şey değiştirmedi.** PostgreSQL yeni fonksiyonlara varsayılan
+olarak `PUBLIC`'e `EXECUTE` verir ve `anon` rolü `PUBLIC`'ten miras alır.
+Canlı veritabanında doğrulandı — tüm `SECURITY DEFINER` fonksiyonların
+ACL'inde PUBLIC grant'ini gösteren `=X/postgres` girdisi vardı ve
+`has_function_privilege('anon', ..., 'EXECUTE')` hepsi için `true` dönüyordu:
+
+| Fonksiyon | 009 öncesi anon | 009 sonrası |
+|---|---|---|
+| `create_user_profile` | çağırabiliyor | engellendi |
+| `get_friends` | çağırabiliyor | engellendi |
+| `search_users_by_username` | çağırabiliyor | engellendi |
+| `join_room_by_code` | çağırabiliyor | engellendi |
+| `check_username_available` | çağırabiliyor | **kasıtlı olarak açık** (kayıt formu) |
+
+Fonksiyonların çoğu içeride `auth.uid()` kontrolü yaptığı için anon çağrısı
+boş dönüyordu; asıl risk `create_user_profile`'daydı — profili henüz
+oluşmamış bir kullanıcının UUID'sini bilen anonim biri, o profili kendi
+seçtiği ad/kullanıcı adı/e-posta ile oluşturabilirdi.
+
+`009` ayrıca `ALTER DEFAULT PRIVILEGES ... REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC`
+ile bundan sonra eklenecek fonksiyonlarda da varsayılanı kapatır.
+
+### Canlı doğrulama (2026-08-27)
+
+`009` uygulandıktan sonra saldırılar production veritabanında **geri alınan
+savepoint'ler içinde** fiilen denendi (mevcut veriye dokunulmadı, kayıt
+sayıları öncesi/sonrası birebir aynı):
+
+| Test | Sonuç |
+|---|---|
+| `from_user_id`'yi başka kullanıcıyla değiştirme | ENGELLENDİ — *taraflar değiştirilemez* |
+| `to_user_id` değiştirme | ENGELLENDİ |
+| Kabul edilmiş isteği `pending`'e geri çekme | ENGELLENDİ |
+| Arkadaş olmayanla zorla eşleşme (RLS) | ENGELLENDİ |
+| Başkası adına davet uydurma (RLS) | ENGELLENDİ |
+| *Regresyon:* meşru kabul / red | ÇALIŞIYOR |
+| *Regresyon:* çift tıklama | SORUNSUZ |
+| *Regresyon:* arkadaşla eşleşme ve davet | ÇALIŞIYOR |
+
+RLS testleri `SET ROLE authenticated` + sahte `request.jwt.claims` ile
+yapıldı; `postgres` rolü RLS'i bypass ettiği için politikalar aksi hâlde
+sınanmış olmazdı.
+
 ### Regresyon koruması
 
 `.github/workflows/ci.yml` artık her build'de `dist/` içinde API anahtarı
@@ -75,9 +127,7 @@ geri gelmesini engeller.
 
 ### Açık kalan / doğrulanamayan
 
-- **Canlı RLS doğrulaması yapılamadı.** Supabase projesi denetim sırasında
-  bağlantı zaman aşımı veriyordu (muhtemelen duraklatılmış). `009` migration'ı
-  uygulandıktan sonra Y-1 ve Y-2 canlı ortamda test edilmelidir.
+- ~~Canlı RLS doğrulaması yapılamadı.~~ **Yapıldı** — yukarıdaki tabloya bakınız.
 - **Rate limit serverless instance belleğindedir**, instance'lar arası
   paylaşılmaz. Asıl kapı kimlik doğrulamadır. Sıkı garanti gerekirse
   Supabase tablosu veya Upstash Redis'e taşınmalıdır.

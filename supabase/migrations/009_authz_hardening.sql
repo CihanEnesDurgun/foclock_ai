@@ -37,6 +37,12 @@ BEGIN
     RAISE EXCEPTION 'Arkadaşlık isteğinin tarafları değiştirilemez';
   END IF;
 
+  -- Aynı duruma yapılan tekrar güncelleme (çift tıklama) hata üretmesin
+  IF NEW.status = OLD.status THEN
+    NEW.created_at := OLD.created_at;
+    RETURN NEW;
+  END IF;
+
   IF OLD.status <> 'pending' THEN
     RAISE EXCEPTION 'Yalnızca bekleyen istekler güncellenebilir';
   END IF;
@@ -167,3 +173,46 @@ BEGIN
   RETURN NOT EXISTS (SELECT 1 FROM profiles WHERE username_lower = lower(trim(u)));
 END;
 $$;
+
+-- ============================================================
+-- [H-1b] SECURITY DEFINER fonksiyonlarında PUBLIC EXECUTE kaldırılır
+--
+-- 008'deki `REVOKE EXECUTE ... FROM anon` ETKİSİZDİ: PostgreSQL yeni
+-- fonksiyonlara varsayılan olarak PUBLIC'e EXECUTE verir ve `anon` rolü
+-- PUBLIC'ten miras alır. Denetimde has_function_privilege('anon', ...)
+-- tüm SECURITY DEFINER fonksiyonlar için hâlâ true dönüyordu.
+--
+-- Bu blok PUBLIC grant'ini kaldırır ve yetkiyi açıkça atar.
+-- anon yalnızca kayıt formunun ihtiyaç duyduğu fonksiyona erişir.
+--
+-- Not: create_user_profile'ın anon erişimi kalkınca, e-posta doğrulaması
+-- bekleyen kayıtlarda profil oluşturma RPC'si başarısız olur. Bu akış
+-- zaten graceful: authService.register kullanıcıyı bilgilendirir ve
+-- authService.login ilk girişte profili upsert ile oluşturur.
+-- ============================================================
+
+DO $$
+DECLARE
+  fn record;
+BEGIN
+  FOR fn IN
+    SELECT p.oid::regprocedure AS sig, p.proname
+    FROM pg_proc p
+    JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND p.prokind = 'f' AND p.prosecdef
+  LOOP
+    EXECUTE format('REVOKE ALL ON FUNCTION %s FROM PUBLIC', fn.sig);
+    EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO authenticated', fn.sig);
+    EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO service_role', fn.sig);
+
+    -- Kayıt formu oturum açmadan çalışır; yalnızca bu fonksiyon anon kalır.
+    IF fn.proname = 'check_username_available' THEN
+      EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO anon', fn.sig);
+    ELSE
+      EXECUTE format('REVOKE ALL ON FUNCTION %s FROM anon', fn.sig);
+    END IF;
+  END LOOP;
+END $$;
+
+-- Bundan sonra oluşturulacak fonksiyonlar için de varsayılanı kapat
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
