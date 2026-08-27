@@ -52,6 +52,8 @@ Birinci denetimin kapattığı bulgular doğrulandı. Ancak bazı düzeltmelerin
 | [O-5] `.claude/` ignore edilmiyordu | ORTA | **KAPATILDI** | `.gitignore`'a eklendi — worktree kopyaları `.env.local` içeriyordu |
 | [D-1] CSP `unsafe-inline`/`unsafe-eval`, ölü 3P script | DÜŞÜK | **KAPATILDI** | `script-src 'self'`; kullanılmayan GSI script'i ve esm.sh importmap'i kaldırıldı |
 | [H-1b] `008`'in anon revoke'u **etkisizdi** | YÜKSEK | **KAPATILDI** | PUBLIC EXECUTE kaldırıldı, yetkiler açıkça atandı (`009_authz_hardening.sql`) |
+| [H-3b] Şifre politikası yalnızca client'taydı | YÜKSEK | **KAPATILDI** | Supabase Auth: min uzunluk 6→12, karakter gereksinimi açıldı |
+| [D-2] Kullanılmayan 3P script + ölü importmap | DÜŞÜK | **KAPATILDI** | GSI script'i ve esm.sh importmap'i `index.html`'den silindi |
 
 ### [K-1] Ayrıntı — anahtar rotasyonu neden hâlâ gerekli
 
@@ -97,6 +99,33 @@ seçtiği ad/kullanıcı adı/e-posta ile oluşturabilirdi.
 
 `009` ayrıca `ALTER DEFAULT PRIVILEGES ... REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC`
 ile bundan sonra eklenecek fonksiyonlarda da varsayılanı kapatır.
+
+### [H-3b] Ayrıntı — şifre politikası sunucuda dayatılmıyordu
+
+`authService.ts` 12 karakter + büyük harf + küçük harf + rakam istiyor.
+Ancak bu **yalnızca client tarafı** bir kontrol. Supabase Dashboard'da
+`Minimum password length` **6** olarak duruyordu ve `Password requirements`
+hiç seçilmemişti.
+
+Sonuç: Supabase Auth REST API'sine (`/auth/v1/signup`) doğrudan istek atan
+biri, uygulamanın arayüzünü hiç kullanmadan 6 karakterlik bir şifreyle
+hesap açabiliyordu. `SECURITY.md`'nin "KAPATILDI" dediği H-3, H-1b ile
+aynı hatayı taşıyordu — düzeltme yalnızca istemcide yapılmıştı.
+
+Dashboard ayarları client politikasıyla **birebir** eşitlendi:
+
+| Ayar | Önce | Sonra |
+|---|---|---|
+| Minimum password length | 6 | **12** |
+| Password requirements | (seçilmemiş) | **Lowercase, uppercase letters and digits** |
+
+Sembol zorunluluğu bilerek eklenmedi: `validatePassword` sembol istemiyor,
+eklenseydi client'ın kabul ettiği şifre sunucuda reddedilir ve kullanıcı
+açıklanamayan bir hata alırdı.
+
+**Kapatılamayan:** `Prevent use of leaked passwords` (HaveIBeenPwned
+kontrolü) yalnızca **Pro plan** ve üzerinde mevcut; proje Free planda
+olduğu için açılamadı.
 
 ### Canlı doğrulama (2026-08-27)
 
